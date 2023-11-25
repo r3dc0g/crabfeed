@@ -1,3 +1,6 @@
+use chrono::NaiveDateTime;
+use feed_rs::model::Text;
+use chrono::{DateTime, Utc};
 use crate::error::Error;
 use crate::models::NewFeed;
 
@@ -9,12 +12,10 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Default)]
 pub struct FeedBuilder {
     title: Option<String>,
-    updated: Option<String>,
+    updated: Option<NaiveDateTime>,
     description: Option<String>,
     language: Option<String>,
-    published: Option<String>,
-    rating: Option<String>,
-    rights: Option<String>,
+    published: Option<NaiveDateTime>,
 }
 
 impl FeedBuilder {
@@ -22,41 +23,41 @@ impl FeedBuilder {
         FeedBuilder::default()
     }
 
-    pub fn title(&mut self, title: impl Into<String>) -> &mut Self {
-        self.title = Some(title.into());
+    pub fn title(&mut self, title: Option<Text>) -> &mut Self {
+        self.title = Some(title.unwrap_or_else(||
+            Text {
+                content_type: mime::TEXT_PLAIN_UTF_8,
+                src: None,
+                content: String::from("Untitled")
+            }).content);
         self
     }
 
-    pub fn updated(&mut self, updated: impl Into<String>) -> &mut Self {
-        self.updated = Some(updated.into());
+    pub fn updated(&mut self, updated: Option<DateTime<Utc>>) -> &mut Self {
+        self.updated = Some(updated.unwrap_or_else(|| chrono::offset::Utc::now()).naive_utc());
         self
     }
 
-    pub fn description(&mut self, description: impl Into<String>) -> &mut Self {
-        self.description = Some(description.into());
+    pub fn description(&mut self, description: Option<Text>) -> &mut Self {
+        self.description = Some(description.unwrap_or_else(||
+            Text {
+                content_type: mime::TEXT_PLAIN_UTF_8,
+                src: None,
+                content: String::from("No description")
+            }).content);
         self
     }
 
-    pub fn language(&mut self, language: impl Into<String>) -> &mut Self {
-        self.language = Some(language.into());
+    pub fn language(&mut self, language: Option<String>) -> &mut Self {
+        self.language = Some(language.unwrap_or_else(|| String::from("No language")));
         self
     }
 
-    pub fn published(&mut self, published: impl Into<String>) -> &mut Self {
-        self.published = Some(published.into());
+
+    pub fn published(&mut self, published: NaiveDateTime) -> &mut Self {
+        self.published = Some(published);
         self
     }
-
-    pub fn rating(&mut self, rating: impl Into<String>) -> &mut Self {
-        self.rating = Some(rating.into());
-        self
-    }
-
-    pub fn rights(&mut self, rights: impl Into<String>) -> &mut Self {
-        self.rights = Some(rights.into());
-        self
-    }
-
 
     pub fn build(&self) -> Result<NewFeed> {
         let Some(title) = self.title.as_ref() else {
@@ -79,22 +80,12 @@ impl FeedBuilder {
             return Err(Error::Static("No Published"));
         };
 
-        let Some(rating) = self.rating.as_ref() else {
-            return Err(Error::Static("No Rating"));
-        };
-
-        let Some(rights) = self.rights.as_ref() else {
-            return Err(Error::Static("No Rights"));
-        };
-
         Ok(NewFeed {
             title: title.as_str(),
-            updated: updated.as_str(),
+            updated,
             description: description.as_str(),
             language: language.as_str(),
-            published: published.as_str(),
-            rating: rating.as_str(),
-            rights: rights.as_str(),
+            published,
         })
     }
 }

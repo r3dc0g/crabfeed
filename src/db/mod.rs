@@ -17,7 +17,23 @@ pub fn connect() -> Result<SqliteConnection> {
     Ok(connection)
 }
 
-pub fn insert_feed(feed: Feed) -> Result<()> {
+pub fn insert_feed(conn: &mut SqliteConnection, feed: Feed) -> Result<()> {
+
+    use crate::schema::feed;
+
+    let mut builder = FeedBuilder::new();
+
+    let new_feed = builder
+        .title(feed.title)
+        .updated(feed.updated)
+        .description(feed.description)
+        .language(feed.language)
+        .published(chrono::offset::Local::now().naive_utc())
+        .build()?;
+
+    diesel::insert_into(feed::table)
+        .values(&new_feed)
+        .execute(conn);
 
     Ok(())
 }

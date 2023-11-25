@@ -70,9 +70,6 @@ diesel::table! {
         description -> Nullable<Text>,
         language -> Nullable<Text>,
         published -> Nullable<Timestamp>,
-        rating -> Nullable<Text>,
-        rights -> Nullable<Text>,
-        ttl -> Nullable<Integer>,
     }
 }
 

@@ -5,10 +5,7 @@ CREATE TABLE feed (
   updated DATETIME,
   description TEXT,
   language VARCHAR,
-  published DATETIME,
-  rating VARCHAR,
-  rights TEXT,
-  ttl INTEGER UNSIGNED
+  published DATETIME
 );
 
 CREATE TABLE entry (
