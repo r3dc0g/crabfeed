@@ -2,7 +2,7 @@
 
 diesel::table! {
     author (author_id) {
-        author_id -> Nullable<Integer>,
+        author_id -> Integer,
         name -> Text,
         uri -> Nullable<Text>,
         email -> Nullable<Text>,
@@ -11,7 +11,7 @@ diesel::table! {
 
 diesel::table! {
     category (category_id) {
-        category_id -> Nullable<Integer>,
+        category_id -> Integer,
         term -> Text,
         scheme -> Nullable<Text>,
         label -> Nullable<Text>,
@@ -20,7 +20,7 @@ diesel::table! {
 
 diesel::table! {
     content (content_id) {
-        content_id -> Nullable<Integer>,
+        content_id -> Integer,
         body -> Nullable<Text>,
         content_type -> Nullable<Text>,
         length -> Nullable<Integer>,
@@ -30,7 +30,7 @@ diesel::table! {
 
 diesel::table! {
     entry (entry_id) {
-        entry_id -> Nullable<Integer>,
+        entry_id -> Integer,
         feed_id -> Integer,
         title -> Nullable<Text>,
         updated -> Nullable<Timestamp>,
@@ -64,7 +64,7 @@ diesel::table! {
 
 diesel::table! {
     feed (feed_id) {
-        feed_id -> Nullable<Integer>,
+        feed_id -> Integer,
         title -> Nullable<Text>,
         updated -> Nullable<Timestamp>,
         description -> Nullable<Text>,
@@ -96,7 +96,7 @@ diesel::table! {
 
 diesel::table! {
     link (link_id) {
-        link_id -> Nullable<Integer>,
+        link_id -> Integer,
         href -> Text,
         rel -> Nullable<Text>,
         media_type -> Nullable<Text>,

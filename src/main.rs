@@ -1,17 +1,17 @@
+mod control;
 mod db;
 mod schema;
 mod prelude;
 mod models;
 mod error;
 
-use tokio
 use anyhow::Result;
-use crate::prelude::*;
+// use crate::prelude::*;
+use control::get_feed;
+use db::*;
 
-
-fn main() -> Result<()> {
-
-
+#[tokio::main]
+async fn main() -> Result<()> {
 
     Ok(())
 }

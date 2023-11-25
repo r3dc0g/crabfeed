@@ -6,9 +6,6 @@ use crate::models::NewFeed;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-// Implements well...
-// just need to add proper
-// types for fields
 #[derive(Default)]
 pub struct FeedBuilder {
     title: Option<String>,
@@ -54,8 +51,8 @@ impl FeedBuilder {
     }
 
 
-    pub fn published(&mut self, published: NaiveDateTime) -> &mut Self {
-        self.published = Some(published);
+    pub fn published(&mut self, published: Option<DateTime<Utc>>) -> &mut Self {
+        self.published = Some(published.unwrap_or_else(|| chrono::offset::Utc::now()).naive_utc());
         self
     }
 
