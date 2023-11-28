@@ -1,6 +1,6 @@
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
-use crate::{prelude::*, models};
+use crate::prelude::*;
 use dotenvy::dotenv;
 use feed_rs::model::{Feed, Entry};
 use std::env;
