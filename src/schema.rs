@@ -37,7 +37,6 @@ diesel::table! {
         content_id -> Nullable<Integer>,
         summary -> Nullable<Text>,
         source -> Nullable<Text>,
-        rights -> Nullable<Text>,
     }
 }
 
