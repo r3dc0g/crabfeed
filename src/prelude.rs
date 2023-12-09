@@ -30,47 +30,6 @@ pub struct NewFeed<'a> {
     pub published: Option<&'a NaiveDateTime>,
 }
 
-#[derive(Queryable, Selectable, Debug)]
-#[diesel(table_name = entry)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
-pub struct Entry {
-    pub entry_id: i32,
-    pub feed_id: i32,
-    pub title: Option<String>,
-    pub updated: Option<NaiveDateTime>,
-    pub content_id: Option<i32>,
-    pub summary: Option<String>,
-    pub source: Option<String>,
-}
-
-#[derive(Insertable, Debug)]
-#[diesel(table_name = entry)]
-pub struct NewEntry<'a> {
-    pub feed_id: &'a i32,
-    pub title: Option<&'a str>,
-    pub updated: Option<&'a NaiveDateTime>,
-    pub content_id: Option<&'a i32>,
-    pub summary: Option<&'a str>,
-    pub source: Option<&'a str>,
-}
-
-#[derive(Queryable, Selectable, Debug)]
-#[diesel(table_name = author)]
-pub struct Author {
-    pub author_id: i32,
-    pub name: String,
-    pub uri: Option<String>,
-    pub email: Option<String>,
-}
-
-#[derive(Insertable, Debug)]
-#[diesel(table_name = author)]
-pub struct NewAuthor<'a> {
-    pub name: &'a str,
-    pub uri: Option<&'a str>,
-    pub email: Option<&'a str>,
-}
-
 #[derive(Default)]
 pub struct FeedBuilder {
     title: Option<String>,
@@ -141,6 +100,30 @@ impl FeedBuilder {
             published: self.published.as_ref(),
         })
     }
+}
+
+#[derive(Queryable, Selectable, Debug)]
+#[diesel(table_name = entry)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct Entry {
+    pub entry_id: i32,
+    pub feed_id: i32,
+    pub title: Option<String>,
+    pub updated: Option<NaiveDateTime>,
+    pub content_id: Option<i32>,
+    pub summary: Option<String>,
+    pub source: Option<String>,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = entry)]
+pub struct NewEntry<'a> {
+    pub feed_id: &'a i32,
+    pub title: Option<&'a str>,
+    pub updated: Option<&'a NaiveDateTime>,
+    pub content_id: Option<&'a i32>,
+    pub summary: Option<&'a str>,
+    pub source: Option<&'a str>,
 }
 
 #[derive(Default)]
@@ -225,11 +208,28 @@ impl EntryBuilder {
     }
 }
 
-#[derive(Default)]
-pub struct AuthorBuilder {
+#[derive(Queryable, Selectable, Debug)]
+#[diesel(table_name = author)]
+pub struct Author {
+    pub author_id: i32,
     pub name: String,
     pub uri: Option<String>,
     pub email: Option<String>,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = author)]
+pub struct NewAuthor<'a> {
+    pub name: &'a str,
+    pub uri: Option<&'a str>,
+    pub email: Option<&'a str>,
+}
+
+#[derive(Default)]
+pub struct AuthorBuilder {
+    name: String,
+    uri: Option<String>,
+    email: Option<String>,
 
 }
 
@@ -275,29 +275,15 @@ impl AuthorBuilder {
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = feed_author)]
 pub struct FeedAuthor {
-    author_id: i32,
-    feed_id: i32,
-}
-
-#[derive(Queryable, Selectable, Debug)]
-#[diesel(table_name = entry_author)]
-pub struct EntryAuthor {
-    author_id: i32,
-    entry_id: i32,
+    pub author_id: i32,
+    pub feed_id: i32,
 }
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = feed_author)]
 pub struct NewFeedAuthor<'a> {
-    author_id: &'a i32,
-    feed_id: &'a i32,
-}
-
-#[derive(Insertable, Debug)]
-#[diesel(table_name = entry_author)]
-pub struct NewEntryAuthor<'a> {
-    author_id: &'a i32,
-    entry_id: &'a i32,
+    pub author_id: &'a i32,
+    pub feed_id: &'a i32,
 }
 
 #[derive(Default, Debug)]
@@ -329,6 +315,20 @@ impl FeedAuthorBuilder {
     }
 }
 
+#[derive(Queryable, Selectable, Debug)]
+#[diesel(table_name = entry_author)]
+pub struct EntryAuthor {
+    pub author_id: i32,
+    pub entry_id: i32,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = entry_author)]
+pub struct NewEntryAuthor<'a> {
+    pub author_id: &'a i32,
+    pub entry_id: &'a i32,
+}
+
 #[derive(Default, Debug)]
 pub struct EntryAuthorBuilder {
     author_id: i32,
@@ -353,6 +353,197 @@ impl EntryAuthorBuilder {
     pub fn build(&self) -> Result<NewEntryAuthor> {
         Ok(NewEntryAuthor {
             author_id: &self.author_id,
+            entry_id: &self.entry_id,
+        })
+    }
+}
+
+#[derive(Queryable, Selectable, Debug)]
+#[diesel(table_name = link)]
+pub struct Link {
+    pub link_id: i32,
+    pub href: String,
+    pub rel: Option<String>,
+    pub media_type: Option<String>,
+    pub href_lang: Option<String>,
+    pub title: Option<String>,
+    pub length: Option<i64>
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = link)]
+pub struct NewLink<'a> {
+    pub href: &'a str,
+    pub rel: Option<&'a str>,
+    pub media_type: Option<&'a str>,
+    pub href_lang: Option<&'a str>,
+    pub title: Option<&'a str>,
+    pub length: Option<&'a i64>,
+}
+
+#[derive(Default, Debug)]
+pub struct LinkBuilder {
+    href: String,
+    rel: Option<String>,
+    media_type: Option<String>,
+    href_lang: Option<String>,
+    title: Option<String>,
+    length: Option<i64>
+}
+
+impl LinkBuilder {
+    pub fn new() -> Self {
+        LinkBuilder::default()
+    }
+
+    pub fn href(&mut self, href: String) -> &mut Self {
+        self.href = href;
+        self
+    }
+
+    pub fn rel(&mut self, rel: Option<String>) -> &mut Self {
+        let Some(link_rel) = rel else {
+            self.rel = None;
+            return self;
+        };
+
+        self.rel = Some(link_rel);
+        self
+    }
+
+    pub fn media_type(&mut self, media_type: Option<String>) -> &mut Self {
+        let Some(link_media) = media_type else {
+            self.media_type = None;
+            return self;
+        };
+
+        self.media_type = Some(link_media);
+        self
+    }
+
+    pub fn href_lang(&mut self, href_lang: Option<String>) -> &mut Self {
+        let Some(link_href_lang) = href_lang else {
+            self.href_lang = None;
+            return self;
+        };
+
+        self.href_lang = Some(link_href_lang);
+        self
+    }
+
+    pub fn title(&mut self, title: Option<String>) -> &mut Self {
+       let Some(link_title) = title else {
+           self.title = None;
+           return self;
+       };
+
+       self.title = Some(link_title);
+       self
+    }
+
+    pub fn length(&mut self, length: Option<u64>) -> &mut Self {
+       let Some(link_length) = length else {
+           self.length = None;
+           return self;
+       };
+
+       self.length = Some(link_length as i64);
+       self
+    }
+
+    pub fn build(&self) -> Result<NewLink> {
+       Ok(NewLink {
+           href: self.href.as_str(),
+           rel: self.rel.as_deref(),
+           media_type: self.media_type.as_deref(),
+           href_lang: self.href_lang.as_deref(),
+           title: self.title.as_deref(),
+           length: self.length.as_ref()
+       })
+    }
+}
+
+#[derive(Queryable, Selectable, Debug)]
+#[diesel(table_name = feed_link)]
+pub struct FeedLink {
+    pub link_id: i32,
+    pub feed_id: i32,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = feed_link)]
+pub struct NewFeedLink<'a> {
+    pub link_id: &'a i32,
+    pub feed_id: &'a i32,
+}
+
+#[derive(Default, Debug)]
+pub struct FeedLinkBuilder {
+    link_id: i32,
+    feed_id: i32,
+}
+
+impl FeedLinkBuilder {
+    pub fn new() -> Self {
+       FeedLinkBuilder::default()
+    }
+
+    pub fn link_id(&mut self, link_id: i32) -> &mut Self {
+        self.link_id = link_id;
+        self
+    }
+
+    pub fn feed_id(&mut self, feed_id: i32) -> &mut Self {
+        self.feed_id = feed_id;
+        self
+    }
+
+    pub fn build(&self) -> Result<NewFeedLink> {
+        Ok(NewFeedLink {
+            link_id: &self.link_id,
+            feed_id: &self.feed_id,
+        })
+    }
+}
+
+#[derive(Queryable, Selectable, Debug)]
+#[diesel(table_name = entry_link)]
+pub struct EntryLink {
+    pub link_id: i32,
+    pub entry_id: i32,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = entry_link)]
+pub struct NewEntryLink<'a> {
+    pub link_id: &'a i32,
+    pub entry_id: &'a i32
+}
+
+#[derive(Default)]
+pub struct EntryLinkBuilder {
+    link_id: i32,
+    entry_id: i32,
+}
+
+impl EntryLinkBuilder {
+    pub fn new() -> Self {
+       EntryLinkBuilder::default()
+    }
+
+    pub fn link_id(&mut self, link_id: i32) -> &mut Self {
+        self.link_id = link_id;
+        self
+    }
+
+    pub fn entry_id(&mut self, entry_id: i32) -> &mut Self {
+        self.entry_id = entry_id;
+        self
+    }
+
+    pub fn build(&self) -> Result<NewEntryLink> {
+        Ok(NewEntryLink {
+            link_id: &self.link_id,
             entry_id: &self.entry_id,
         })
     }

@@ -101,7 +101,7 @@ diesel::table! {
         media_type -> Nullable<Text>,
         href_lang -> Nullable<Text>,
         title -> Nullable<Text>,
-        length -> Nullable<Integer>,
+        length -> Nullable<BigInt>,
     }
 }
 

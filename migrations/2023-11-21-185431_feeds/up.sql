@@ -34,15 +34,15 @@ CREATE TABLE link (
   media_type VARCHAR,
   href_lang VARCHAR,
   title VARCHAR,
-  length INTEGER
+  length BIGINT
 );
 
 CREATE TABLE content (
   content_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   body TEXT,
   content_type VARCHAR,
-  length INTEGER UNSIGNED,
-  src INTEGER UNSIGNED,
+  length BIGINT,
+  src INTEGER,
   FOREIGN KEY(src) REFERENCES link(link_id)
 );
 

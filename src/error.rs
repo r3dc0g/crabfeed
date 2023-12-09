@@ -9,9 +9,6 @@ pub enum Error {
     Static(&'static str),
 
     #[error(transparent)]
-    IO(#[from] std::io::Error),
-
-    #[error(transparent)]
     Query(#[from] diesel::result::Error),
 
     #[error(transparent)]
