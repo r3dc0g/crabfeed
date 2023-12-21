@@ -38,6 +38,7 @@ pub fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> Result<()>
         .returning(prelude::Feed::as_returning())
         .get_result(conn)?;
 
+    println!("{:#?}", feed.authors);
     insert_authors(conn, feed.authors, Some(ret_feed.feed_id), None)?;
     insert_links(conn, feed.links, Some(ret_feed.feed_id), None)?;
     insert_entries(conn, feed.entries, ret_feed.feed_id)?;
@@ -65,6 +66,7 @@ pub fn insert_entries(conn: &mut SqliteConnection, entries: Vec<model::Entry>, f
             .returning(prelude::Entry::as_returning())
             .get_result(conn)?;
 
+        println!("{:#?}", entry.authors);
         insert_authors(conn, entry.authors, None, Some(ret_entry.entry_id))?;
         insert_links(conn, entry.links, None, Some(ret_entry.entry_id))?;
 
@@ -176,6 +178,58 @@ pub fn insert_links(conn: &mut SqliteConnection, links: Vec<model::Link>, feed_i
             .values(&feed_link)
             .execute(conn)?;
 
+    }
+
+    Ok(())
+}
+
+pub fn insert_categories(conn: &mut SqliteConnection, categories: Vec<model::Category>, feed_id: Option<i32>, entry_id: Option<i32>) -> Result<()> {
+
+    let mut builder = CategoryBuilder::new();
+
+    for category in categories {
+
+        let new_category = builder
+            .term(category.term)
+            .scheme(category.scheme)
+            .label(category.label)
+            .build()?;
+
+        let ret_category: prelude::Category = diesel::insert_into(category::table)
+            .values(&new_category)
+            .returning(prelude::Category::as_returning())
+            .get_result(conn)?;
+
+        let Some(f_id) = feed_id else {
+
+            let Some(e_id) = entry_id else {
+                return Err(Error::Static("Orphaned Category"));
+            };
+
+            let mut ec_builder = EntryCategoryBuilder::new();
+
+            let entry_category = ec_builder
+                .category_id(ret_category.category_id)
+                .entry_id(e_id)
+                .build()?;
+
+            diesel::insert_into(entry_author::table)
+                .values(&entry_author)
+                .execute(conn)?;
+
+            continue;
+        };
+
+        let mut fa_builder = FeedAuthorBuilder::new();
+
+        let feed_author = fa_builder
+            .author_id(ret_author.author_id)
+            .feed_id(f_id)
+            .build()?;
+
+        diesel::insert_into(feed_author::table)
+            .values(&feed_author)
+            .execute(conn)?;
     }
 
     Ok(())

@@ -23,7 +23,7 @@ diesel::table! {
         content_id -> Integer,
         body -> Nullable<Text>,
         content_type -> Nullable<Text>,
-        length -> Nullable<Integer>,
+        length -> Nullable<BigInt>,
         src -> Nullable<Integer>,
     }
 }

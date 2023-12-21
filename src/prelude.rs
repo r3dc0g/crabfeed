@@ -8,6 +8,8 @@ use crate::schema::*;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
+/// === Feed Entity =====================================
+
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = feed)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
@@ -101,6 +103,10 @@ impl FeedBuilder {
         })
     }
 }
+
+/// === Feed Entity =====================================
+
+/// === Entry Entity ====================================
 
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = entry)]
@@ -208,6 +214,10 @@ impl EntryBuilder {
     }
 }
 
+/// === Entry Entity ====================================
+
+/// === Author Entity ===================================
+
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = author)]
 pub struct Author {
@@ -272,6 +282,10 @@ impl AuthorBuilder {
     }
 }
 
+/// === Author Entity ===================================
+
+/// === Feed-Author Relationship ========================
+
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = feed_author)]
 pub struct FeedAuthor {
@@ -315,6 +329,10 @@ impl FeedAuthorBuilder {
     }
 }
 
+/// === Feed-Author Relationship ========================
+
+/// === Entry-Author Relationship =======================
+
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = entry_author)]
 pub struct EntryAuthor {
@@ -357,6 +375,10 @@ impl EntryAuthorBuilder {
         })
     }
 }
+
+/// === Entry-Author Relationship =======================
+
+/// === Link Entity =====================================
 
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = link)]
@@ -463,6 +485,10 @@ impl LinkBuilder {
     }
 }
 
+/// === Link Entity =====================================
+
+/// === Feed-Link Relationship ==========================
+
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = feed_link)]
 pub struct FeedLink {
@@ -506,6 +532,10 @@ impl FeedLinkBuilder {
     }
 }
 
+/// === Feed-Link Relationship ==========================
+
+/// === Entry-Link Relationship =========================
+
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = entry_link)]
 pub struct EntryLink {
@@ -546,5 +576,252 @@ impl EntryLinkBuilder {
             link_id: &self.link_id,
             entry_id: &self.entry_id,
         })
+    }
+}
+
+/// === Entry-Link Relationship =========================
+
+/// === Category Entity =================================
+
+#[derive(Queryable, Selectable, Debug)]
+#[derive(table_name = category)]
+pub struct Category {
+    pub category_id: i32,
+    pub term: String,
+    pub scheme: Option<String>,
+    pub label: Option<String>,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = category)]
+pub struct NewCategory<'a> {
+    pub term: &'a str,
+    pub scheme: Option<&'a str>,
+    pub label: Option<&'a str>,
+}
+
+#[derive(Default, Debug)]
+pub struct CategoryBuilder {
+    pub term: String,
+    pub scheme: Option<String>,
+    pub label: Option<String>,
+}
+
+impl CategoryBuilder {
+    pub fn new() -> Self {
+       CategoryBuilder::default()
+    }
+
+    pub fn term(&mut self, term: String) -> &mut Self {
+       self.term = term;
+       self
+    }
+
+    pub fn scheme(&mut self, scheme: Option<String>) -> &mut Self {
+       let Some(category_scheme) = scheme else {
+           self.scheme = None;
+           return self;
+       };
+
+       self.scheme = Some(category_scheme);
+       self
+    }
+
+    pub fn label(&mut self, label: Option<String>) -> &mut Self {
+        let Some(category_label) = label else {
+            self.label = None;
+            return self;
+        };
+
+        self.label = Some(category_label);
+        self
+    }
+
+    pub fn build(&self) -> Result<NewCategory> {
+       Ok(NewCategory {
+           term: self.term.as_str(),
+           scheme: self.scheme.as_deref(),
+           label: self.label.as_deref(),
+       })
+    }
+}
+
+/// === Category Entity =================================
+
+/// === Feed-Category Relationship ======================
+
+#[derive(Queryable, Selectable, Debug)]
+#[diesel(table_name = feed_category)]
+pub struct FeedCategory {
+    pub category_id: i32,
+    pub feed_id: i32,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = feed_category)]
+pub struct NewFeedCategory<'a> {
+    pub category_id: &'a i32,
+    pub feed_id: &'a i32,
+}
+
+#[derive(Default, Debug)]
+pub struct FeedCategoryBuilder {
+    category_id: i32,
+    feed_id: i32,
+}
+
+impl FeedCategoryBuilder {
+    pub fn new() -> Self {
+       FeedCategoryBuilder::default()
+    }
+
+    pub fn category_id(&mut self, link_id: i32) -> &mut Self {
+        self.category_id = link_id;
+        self
+    }
+
+    pub fn feed_id(&mut self, feed_id: i32) -> &mut Self {
+        self.feed_id = feed_id;
+        self
+    }
+
+    pub fn build(&self) -> Result<NewFeedCategory> {
+        Ok(NewFeedCategory {
+            category_id: &self.category_id,
+            feed_id: &self.feed_id,
+        })
+    }
+}
+
+/// === Feed-Category Relationship ======================
+
+/// === Entry-Category Relationship =====================
+
+#[derive(Queryable, Selectable, Debug)]
+#[diesel(table_name = entry_category)]
+pub struct EntryCategory {
+    pub category_id: i32,
+    pub entry_id: i32,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = entry_category)]
+pub struct NewEntryCategory<'a> {
+    pub category_id: &'a i32,
+    pub entry_id: &'a i32
+}
+
+#[derive(Default)]
+pub struct EntryCategoryBuilder {
+    category_id: i32,
+    entry_id: i32,
+}
+
+impl EntryCategoryBuilder {
+    pub fn new() -> Self {
+       EntryCategoryBuilder::default()
+    }
+
+    pub fn category_id(&mut self, link_id: i32) -> &mut Self {
+        self.category_id = link_id;
+        self
+    }
+
+    pub fn entry_id(&mut self, entry_id: i32) -> &mut Self {
+        self.entry_id = entry_id;
+        self
+    }
+
+    pub fn build(&self) -> Result<NewEntryCategory> {
+        Ok(NewEntryCategory {
+            category_id: &self.category_id,
+            entry_id: &self.entry_id,
+        })
+    }
+}
+
+/// === Entry-Category Relationship =====================
+
+/// === Content Entity =================================
+
+#[derive(Queryable, Selectable, Debug)]
+#[derive(table_name = content)]
+pub struct Content {
+    pub content_id: i32,
+    pub body: Option<String>,
+    pub content_type: Option<String>,
+    pub length: Option<i64>,
+    pub src: Option<i32>,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = content)]
+pub struct NewContent<'a> {
+    pub body: Option<&'a str>,
+    pub content_type: Option<&'a str>,
+    pub length: Option<&'a i64>,
+    pub src: Option<&'a i32>,
+}
+
+#[derive(Default, Debug)]
+pub struct ContentBuilder {
+    pub body: Option<String>,
+    pub content_type: Option<String>,
+    pub length: Option<i64>,
+    pub src: Option<i32>,
+}
+
+impl ContentBuilder {
+    pub fn new() -> Self {
+       ContentBuilder::default()
+    }
+
+    pub fn body(&mut self, body: Option<Text>) -> &mut Self {
+       let Some(content_body) = body else {
+           self.body = None;
+           return self;
+       };
+
+       self.body = Some(content_body.content);
+       self
+    }
+
+    pub fn content_type(&mut self, content_type: Option<Text>) -> &mut Self {
+       let Some(type_of_content) = content_type else {
+           self.content_type = None;
+           return self;
+       };
+
+       self.content_type = Some(type_of_content.content);
+       self
+    }
+
+    pub fn length(&mut self, length: Option<u64>) -> &mut Self {
+        let Some(content_length) = length else {
+            self.length = None;
+            return self;
+        };
+
+        self.length = Some(content_length as i64);
+        self
+    }
+
+    pub fn src(&mut self, src: Option<i32>) -> &mut Self {
+        let Some(content_src) = src else {
+            self.src = None;
+            return self;
+        };
+
+        self.src = Some(content_src);
+        self
+    }
+
+    pub fn build(&self) -> Result<NewContent> {
+       Ok(NewContent {
+           body: self.body.as_deref(),
+           content_type: self.content_type.as_deref(),
+           length: self.length.as_ref(),
+           src: self.src.as_ref(),
+       })
     }
 }
