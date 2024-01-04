@@ -2,13 +2,12 @@
 use chrono::NaiveDateTime;
 use feed_rs::model::Text;
 use chrono::{DateTime, Utc};
+use mime::Mime;
 use crate::error::Error;
 use diesel::prelude::*;
 use crate::schema::*;
 
 pub type Result<T> = core::result::Result<T, Error>;
-
-/// === Feed Entity =====================================
 
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = feed)]
@@ -103,10 +102,6 @@ impl FeedBuilder {
         })
     }
 }
-
-/// === Feed Entity =====================================
-
-/// === Entry Entity ====================================
 
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = entry)]
@@ -214,12 +209,9 @@ impl EntryBuilder {
     }
 }
 
-/// === Entry Entity ====================================
-
-/// === Author Entity ===================================
-
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = author)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Author {
     pub author_id: i32,
     pub name: String,
@@ -282,12 +274,9 @@ impl AuthorBuilder {
     }
 }
 
-/// === Author Entity ===================================
-
-/// === Feed-Author Relationship ========================
-
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = feed_author)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct FeedAuthor {
     pub author_id: i32,
     pub feed_id: i32,
@@ -329,12 +318,9 @@ impl FeedAuthorBuilder {
     }
 }
 
-/// === Feed-Author Relationship ========================
-
-/// === Entry-Author Relationship =======================
-
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = entry_author)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct EntryAuthor {
     pub author_id: i32,
     pub entry_id: i32,
@@ -376,12 +362,9 @@ impl EntryAuthorBuilder {
     }
 }
 
-/// === Entry-Author Relationship =======================
-
-/// === Link Entity =====================================
-
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = link)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Link {
     pub link_id: i32,
     pub href: String,
@@ -485,12 +468,9 @@ impl LinkBuilder {
     }
 }
 
-/// === Link Entity =====================================
-
-/// === Feed-Link Relationship ==========================
-
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = feed_link)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct FeedLink {
     pub link_id: i32,
     pub feed_id: i32,
@@ -532,12 +512,9 @@ impl FeedLinkBuilder {
     }
 }
 
-/// === Feed-Link Relationship ==========================
-
-/// === Entry-Link Relationship =========================
-
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = entry_link)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct EntryLink {
     pub link_id: i32,
     pub entry_id: i32,
@@ -579,12 +556,9 @@ impl EntryLinkBuilder {
     }
 }
 
-/// === Entry-Link Relationship =========================
-
-/// === Category Entity =================================
-
 #[derive(Queryable, Selectable, Debug)]
-#[derive(table_name = category)]
+#[diesel(table_name = category)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Category {
     pub category_id: i32,
     pub term: String,
@@ -646,12 +620,9 @@ impl CategoryBuilder {
     }
 }
 
-/// === Category Entity =================================
-
-/// === Feed-Category Relationship ======================
-
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = feed_category)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct FeedCategory {
     pub category_id: i32,
     pub feed_id: i32,
@@ -693,12 +664,9 @@ impl FeedCategoryBuilder {
     }
 }
 
-/// === Feed-Category Relationship ======================
-
-/// === Entry-Category Relationship =====================
-
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = entry_category)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct EntryCategory {
     pub category_id: i32,
     pub entry_id: i32,
@@ -740,12 +708,9 @@ impl EntryCategoryBuilder {
     }
 }
 
-/// === Entry-Category Relationship =====================
-
-/// === Content Entity =================================
-
 #[derive(Queryable, Selectable, Debug)]
-#[derive(table_name = content)]
+#[diesel(table_name = content)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Content {
     pub content_id: i32,
     pub body: Option<String>,
@@ -776,23 +741,19 @@ impl ContentBuilder {
        ContentBuilder::default()
     }
 
-    pub fn body(&mut self, body: Option<Text>) -> &mut Self {
+    pub fn body(&mut self, body: Option<String>) -> &mut Self {
        let Some(content_body) = body else {
            self.body = None;
            return self;
        };
 
-       self.body = Some(content_body.content);
+       self.body = Some(content_body);
        self
     }
 
-    pub fn content_type(&mut self, content_type: Option<Text>) -> &mut Self {
-       let Some(type_of_content) = content_type else {
-           self.content_type = None;
-           return self;
-       };
+    pub fn content_type(&mut self, content_type: Mime) -> &mut Self {
 
-       self.content_type = Some(type_of_content.content);
+       self.content_type = Some(content_type.type_().to_string());
        self
     }
 

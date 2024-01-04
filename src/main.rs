@@ -18,17 +18,33 @@ async fn main() -> Result<()> {
 mod tests {
 
     use anyhow::Result;
+    use std::fs::read_to_string;
 
     #[tokio::test]
     async fn test_feed_insertion() -> Result<()> {
         use crate::control::get_feed;
         use crate::db::*;
 
-        let test_feed = get_feed("https://www.midwesternmarx.com/1/feed").await?;
+        let mut lines = Vec::new();
+
+        for line in read_to_string("urls")?.lines() {
+            lines.push(line.to_string());
+        }
 
         let conn = &mut connect()?;
 
-        insert_feed(conn, test_feed)?;
+        for line in lines {
+            match get_feed(line).await {
+                Ok(test_feed) => {
+                    insert_feed(conn, test_feed)?;
+                },
+                Err(e) => {
+                    println!("{:?}", e);
+                    ()
+                }
+            }
+
+        }
 
         Ok(())
     }
