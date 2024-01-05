@@ -5,11 +5,14 @@ mod prelude;
 mod error;
 mod ui;
 
-use anyhow::Result;
-// use crate::prelude::*;
+use error::Error;
+
+pub type Result<T> = core::result::Result<T, Error>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+
+    ui::start_ui()?;
 
     Ok(())
 }

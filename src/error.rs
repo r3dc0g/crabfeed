@@ -16,4 +16,7 @@ pub enum Error {
 
     #[error(transparent)]
     EnvVar(#[from] std::env::VarError),
+
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
 }
