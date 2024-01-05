@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use chrono::NaiveDateTime;
 use feed_rs::model::Text;
 use chrono::{DateTime, Utc};

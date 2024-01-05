@@ -48,7 +48,21 @@ pub fn insert_feed(
     Ok(())
 }
 
-pub fn insert_entries(
+pub fn get_feed() -> Result<Vec<Feed>> {
+
+    use crate::schema::feed::dsl::*;
+
+    let conn = &mut connect()?;
+
+    let results = feed
+        .limit(10)
+        .load::<Feed>(conn)?;
+
+    Ok(results)
+
+}
+
+fn insert_entries(
         conn: &mut SqliteConnection,
         entries: Vec<model::Entry>,
         feed_id: i32
@@ -82,7 +96,7 @@ pub fn insert_entries(
     Ok(())
 }
 
-pub fn insert_authors(
+fn insert_authors(
         conn: &mut SqliteConnection,
         authors: Vec<model::Person>,
         feed_id: Option<i32>,
@@ -139,7 +153,7 @@ pub fn insert_authors(
     Ok(())
 }
 
-pub fn insert_links(
+fn insert_links(
         conn: &mut SqliteConnection,
         links: Vec<model::Link>,
         feed_id: Option<i32>,
@@ -199,7 +213,7 @@ pub fn insert_links(
     Ok(())
 }
 
-pub fn insert_categories(
+fn insert_categories(
         conn: &mut SqliteConnection,
         categories: Vec<model::Category>,
         feed_id: Option<i32>,
