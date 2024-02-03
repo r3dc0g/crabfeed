@@ -1,8 +1,8 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    author (author_id) {
-        author_id -> Integer,
+    author (id) {
+        id -> Integer,
         name -> Text,
         uri -> Nullable<Text>,
         email -> Nullable<Text>,
@@ -10,8 +10,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    category (category_id) {
-        category_id -> Integer,
+    category (id) {
+        id -> Integer,
         term -> Text,
         scheme -> Nullable<Text>,
         label -> Nullable<Text>,
@@ -19,8 +19,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    content (content_id) {
-        content_id -> Integer,
+    content (id) {
+        id -> Integer,
         body -> Nullable<Text>,
         content_type -> Nullable<Text>,
         length -> Nullable<BigInt>,
@@ -29,8 +29,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    entry (entry_id) {
-        entry_id -> Integer,
+    entry (id) {
+        id -> Integer,
         feed_id -> Integer,
         title -> Nullable<Text>,
         updated -> Nullable<Timestamp>,
@@ -62,8 +62,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    feed (feed_id) {
-        feed_id -> Integer,
+    feed (id) {
+        id -> Integer,
         title -> Nullable<Text>,
         updated -> Nullable<Timestamp>,
         description -> Nullable<Text>,
@@ -94,8 +94,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    link (link_id) {
-        link_id -> Integer,
+    link (id) {
+        id -> Integer,
         href -> Text,
         rel -> Nullable<Text>,
         media_type -> Nullable<Text>,
@@ -104,22 +104,6 @@ diesel::table! {
         length -> Nullable<BigInt>,
     }
 }
-
-diesel::joinable!(content -> link (src));
-diesel::joinable!(entry -> content (content_id));
-diesel::joinable!(entry -> feed (feed_id));
-diesel::joinable!(entry_author -> author (author_id));
-diesel::joinable!(entry_author -> entry (entry_id));
-diesel::joinable!(entry_category -> category (category_id));
-diesel::joinable!(entry_category -> entry (entry_id));
-diesel::joinable!(entry_link -> entry (entry_id));
-diesel::joinable!(entry_link -> link (link_id));
-diesel::joinable!(feed_author -> author (author_id));
-diesel::joinable!(feed_author -> feed (feed_id));
-diesel::joinable!(feed_category -> category (category_id));
-diesel::joinable!(feed_category -> feed (feed_id));
-diesel::joinable!(feed_link -> feed (feed_id));
-diesel::joinable!(feed_link -> link (link_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     author,
