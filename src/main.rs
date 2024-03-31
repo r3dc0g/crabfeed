@@ -4,6 +4,7 @@ mod schema;
 mod prelude;
 mod error;
 mod ui;
+mod app;
 
 use error::Error;
 

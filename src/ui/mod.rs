@@ -1,13 +1,22 @@
 use std::io::stdout;
 use crate::prelude::*;
 use crate::error::Error;
+use crate::app::App;
+
 use crossterm::{
     event::{self, Event, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use ratatui::{prelude::*, widgets::*};
 use crate::db::{get_entries, get_feeds, select_feed};
+use ratatui::{
+  backend::Backend,
+  layout::{Alignment, Constraint, Direction, Layout, Rect},
+  style::{Modifier, Style},
+  text::{Span, Text},
+  widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Row, Table, Wrap},
+  Frame,
+};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -142,7 +151,9 @@ fn handle_events() -> Result<bool> {
     Ok(false)
 }
 
-fn render_start_page(frame: &mut Frame) {
+fn render_start_page<B>(frame: &mut Frame<B>, app: &App)
+where
+    B: Backend, {
 
     let feeds = get_feeds().expect("Cannot connect to database");
 
