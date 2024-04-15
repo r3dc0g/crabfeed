@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
 use crate::prelude::*;
@@ -35,6 +33,15 @@ pub fn insert_feed(
         .language(feed.language)
         .published(feed.published)
         .build()?;
+
+    let found_feed = feed::table
+        .filter(feed::title.eq(&new_feed.title))
+        .select(Feed::as_select())
+        .get_result(conn);
+
+    if found_feed.is_ok() {
+        return Err(Error::Static("Feed already exists"));
+    }
 
     let ret_feed: Feed = diesel::insert_into(feed::table)
         .values(&new_feed)

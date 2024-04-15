@@ -1,16 +1,13 @@
 use ratatui::layout::Rect;
+use std::sync::mpsc::Sender;
 
-let DEFAULT_ROUTE = Route {
+use feed_rs::model::Feed;
+
+use crate::network::IOEvent;
+
+const DEFAULT_ROUTE: Route = Route {
     id: RouteId::Feeds,
-
-}
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum ActiveBlock {
-    Feeds,
-    Entries,
-    Entry
-}
+};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum RouteId {
@@ -22,20 +19,17 @@ pub enum RouteId {
 #[derive(Debug)]
 pub struct Route {
     pub id: RouteId,
-    pub active_block: ActiveBlock,
 }
 
 pub struct App {
     navigation_stack: Vec<Route>,
-    // pub user_config: UserConfig,
     pub selected_feed_index: Option<usize>,
     pub selected_entry_index: Option<usize>,
     pub size: Rect,
     pub is_loading: bool,
-    // io_tx: Option<Sender<IoEvent>>,
+    pub io_tx: Option<Sender<IOEvent>>,
     pub is_fetching_current_feed: bool,
-    pub dialog: Option<String>,
-    pub confirm: bool,
+    pub feeds: Vec<Feed>,
 }
 
 impl Default for App {
@@ -46,9 +40,9 @@ impl Default for App {
             selected_feed_index: None,
             selected_entry_index: None,
             is_loading: false,
+            io_tx: None,
             is_fetching_current_feed: false,
-            dialog: None,
-            confirm: false,
+            feeds: vec![],
         }
     }
 
@@ -56,7 +50,38 @@ impl Default for App {
 }
 
 impl App {
-    pub fn new() -> Self {
-        App::default()
+    pub fn new(io_tx: Sender<IOEvent>) -> Self {
+        Self {
+            io_tx: Some(io_tx),
+            ..Default::default()
+        }
+    }
+
+    pub fn dispatch(&mut self, event: IOEvent) {
+        self.is_loading = true;
+        if let Some(tx) = &self.io_tx {
+            if let Err(e) = tx.send(event) {
+                eprintln!("Error sending IOEvent: {:?}", e);
+            };
+        }
+
+    }
+
+    pub fn push_navigation_stack(&mut self, next_route_id: RouteId) {
+        if !self.navigation_stack.last().map(|r| r.id == next_route_id).unwrap_or(false) {
+            self.navigation_stack.push(Route { id: next_route_id });
+        }
+    }
+
+    pub fn pop_navigation_stack(&mut self) -> Option<Route> {
+        if self.navigation_stack.len() > 1 {
+            self.navigation_stack.pop()
+        } else {
+            None
+        }
+    }
+
+    pub fn get_current_route(&self) -> &Route {
+        self.navigation_stack.last().unwrap_or(&DEFAULT_ROUTE)
     }
 }

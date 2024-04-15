@@ -2,6 +2,7 @@ use std::io::stdout;
 use crate::prelude::*;
 use crate::error::Error;
 use crate::app::App;
+use ratatui::prelude::*;
 
 use crossterm::{
     event::{self, Event, KeyCode},
@@ -10,12 +11,13 @@ use crossterm::{
 };
 use crate::db::{get_entries, get_feeds, select_feed};
 use ratatui::{
-  backend::Backend,
-  layout::{Alignment, Constraint, Direction, Layout, Rect},
-  style::{Modifier, Style},
-  text::{Span, Text},
-  widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Row, Table, Wrap},
-  Frame,
+
+    backend::Backend,
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Modifier, Style},
+    text::{Span, Text},
+    widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Row, Table, Wrap},
+    Frame,
 };
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -120,21 +122,6 @@ impl EntryList {
     }
 }
 
-pub fn start_ui() -> Result<()> {
-    enable_raw_mode()?;
-    stdout().execute(EnterAlternateScreen)?;
-    let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
-
-    let mut should_quit = false;
-    while !should_quit {
-        terminal.draw(render_start_page)?;
-        should_quit = handle_events()?;
-    }
-
-    disable_raw_mode()?;
-    stdout().execute(LeaveAlternateScreen)?;
-    Ok(())
-}
 
 fn handle_events() -> Result<bool> {
     if event::poll(std::time::Duration::from_millis(50))? {
@@ -151,9 +138,7 @@ fn handle_events() -> Result<bool> {
     Ok(false)
 }
 
-fn render_start_page<B>(frame: &mut Frame<B>, app: &App)
-where
-    B: Backend, {
+fn render_start_page<B>(frame: &mut Frame) {
 
     let feeds = get_feeds().expect("Cannot connect to database");
 
