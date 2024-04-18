@@ -41,21 +41,24 @@ diesel::table! {
 }
 
 diesel::table! {
-    entry_author (author_id, entry_id) {
+    entry_author (id) {
+        id -> Integer,
         author_id -> Integer,
         entry_id -> Integer,
     }
 }
 
 diesel::table! {
-    entry_category (category_id, entry_id) {
+    entry_category (id) {
+        id -> Integer,
         category_id -> Integer,
         entry_id -> Integer,
     }
 }
 
 diesel::table! {
-    entry_link (link_id, entry_id) {
+    entry_link (id) {
+        id -> Integer,
         link_id -> Integer,
         entry_id -> Integer,
     }
@@ -73,21 +76,24 @@ diesel::table! {
 }
 
 diesel::table! {
-    feed_author (author_id, feed_id) {
+    feed_author (id) {
+        id -> Integer,
         author_id -> Integer,
         feed_id -> Integer,
     }
 }
 
 diesel::table! {
-    feed_category (category_id, feed_id) {
+    feed_category (id) {
+        id -> Integer,
         category_id -> Integer,
         feed_id -> Integer,
     }
 }
 
 diesel::table! {
-    feed_link (link_id, feed_id) {
+    feed_link (id) {
+        id -> Integer,
         link_id -> Integer,
         feed_id -> Integer,
     }
@@ -104,6 +110,20 @@ diesel::table! {
         length -> Nullable<BigInt>,
     }
 }
+
+diesel::joinable!(entry -> feed (feed_id));
+diesel::joinable!(entry_author -> author (author_id));
+diesel::joinable!(entry_author -> entry (entry_id));
+diesel::joinable!(entry_category -> category (category_id));
+diesel::joinable!(entry_category -> entry (entry_id));
+diesel::joinable!(entry_link -> entry (entry_id));
+diesel::joinable!(entry_link -> link (link_id));
+diesel::joinable!(feed_author -> author (author_id));
+diesel::joinable!(feed_author -> feed (feed_id));
+diesel::joinable!(feed_category -> category (category_id));
+diesel::joinable!(feed_category -> feed (feed_id));
+diesel::joinable!(feed_link -> feed (feed_id));
+diesel::joinable!(feed_link -> link (link_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     author,

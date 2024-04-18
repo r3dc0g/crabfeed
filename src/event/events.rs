@@ -1,6 +1,9 @@
 use crate::event::Key;
+use crate::error::Error;
 use crossterm::event;
 use std::{sync::mpsc, thread, time::Duration};
+
+pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug, Clone, Copy)]
 /// Configuration for event handling.
@@ -70,7 +73,7 @@ impl Events {
 
   /// Attempts to read an event.
   /// This function will block the current thread.
-  pub fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
-    self.rx.recv()
+  pub fn next(&self) -> Result<Event<Key>> {
+    Ok(self.rx.recv()?)
   }
 }

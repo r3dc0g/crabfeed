@@ -7,6 +7,7 @@ mod ui;
 mod app;
 mod network;
 mod event;
+mod handlers;
 
 use std::{
     io::stdout,
@@ -27,13 +28,14 @@ use crossterm::{
 };
 
 use ratatui::{
-    backend::CrosstermBackend,
+    backend::{Backend, CrosstermBackend},
     terminal::Terminal,
 };
 
 use tokio::sync::Mutex;
 use crate::app::App;
 use crate::network::{IOEvent, Network};
+// use crate::handlers::handle_app;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -41,24 +43,19 @@ pub type Result<T> = core::result::Result<T, Error>;
 async fn main() -> Result<()> {
 
     let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IOEvent>();
-    let app = app::App::new(sync_io_tx);
 
-      // Initialise app stat
+    // Initialise app stat
     let app = Arc::new(Mutex::new(App::new(
       sync_io_tx,
     )));
 
-        let cloned_app = Arc::clone(&app);
-        std::thread::spawn(move || {
-          let mut network = Network::new(&app);
-          start_tokio(sync_io_rx, &mut network);
-        });
-    //
-        // The UI must run in the "main" thread
-        start_ui(&cloned_app).await;
+    let cloned_app = Arc::clone(&app);
+    std::thread::spawn(move || {
+      let mut network = Network::new(&app);
+      start_tokio(sync_io_rx, &mut network);
+    });
 
-
-    start_ui(&app)?;
+    start_ui(&cloned_app).await?;
 
     Ok(())
 }
@@ -66,25 +63,25 @@ async fn main() -> Result<()> {
 #[tokio::main]
 async fn start_tokio<'a>(io_rx: std::sync::mpsc::Receiver<IOEvent>, network: &mut Network) {
     while let Ok(io_event) = io_rx.recv() {
-        network.handle_io_event(io_event).await.unwrap();
+        network.handle_io_event(io_event).await;
     }
 }
 
 async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
     let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     enable_raw_mode()?;
 
-    let backend = CrosstermBackend::new(stdout);
+    let mut backend = CrosstermBackend::new(stdout);
 
     backend.execute(SetTitle("crabfeed"))?;
 
-    let mut terminal = Terminal::new(backend);
+    let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
     let events = event::Events::new(250);
 
-    let is_first_render = true;
+    let mut is_first_render = true;
 
     loop {
 
@@ -97,14 +94,49 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
 
         let mut app = app.lock().await;
 
-        let current_route = app.get_current_route();
+        if is_first_render {
+            app.dispatch(IOEvent::FetchFeeds);
+        }
+
+        if let Ok(size) = terminal.backend().size() {
+            if is_first_render || app.size != size {
+                app.size = size;
+            }
+        }
+
+        // let current_route = app.get_current_route();
         terminal.draw(
-            |mut f|
+            |f|
+            {
+                ui::render_start_page(f, &app);
+            }
         )?;
+
+        match events.next()? {
+            event::Event::Input(key) => {
+                if key == event::Key::Char('q') {
+                    break;
+                }
+
+                handlers::handle_app(key, &mut app);
+            }
+            event::Event::Tick => {
+                app._update_on_tick();
+            }
+        }
+
+        is_first_render = false;
     }
 
+    terminal.show_cursor()?;
+    close_app()?;
+    Ok(())
+}
+
+fn close_app() -> Result<()> {
     disable_raw_mode()?;
-    stdout().execute(LeaveAlternateScreen)?;
+    let mut stdout = stdout();
+    execute!(stdout, LeaveAlternateScreen, DisableMouseCapture)?;
     Ok(())
 }
 

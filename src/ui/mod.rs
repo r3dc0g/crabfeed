@@ -1,22 +1,14 @@
-use std::io::stdout;
-use crate::prelude::*;
 use crate::error::Error;
 use crate::app::App;
 use ratatui::prelude::*;
 
-use crossterm::{
-    event::{self, Event, KeyCode},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
-};
-use crate::db::{get_entries, get_feeds, select_feed};
-use ratatui::{
+use crossterm::event::{self, Event, KeyCode};
 
-    backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
-    text::{Span, Text},
-    widgets::{Block, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Row, Table, Wrap},
+// use crate::db::{get_entries, get_feeds, select_feed};
+
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame,
 };
 
@@ -34,9 +26,10 @@ impl FeedList {
     }
 
     pub fn set_items(&mut self, items: Vec<String>) {
-       self.items = items;
 
-       self.state = ListState::default();
+        self.items = items;
+
+        self.state = ListState::default();
     }
 
     pub fn next(&mut self) {
@@ -138,25 +131,7 @@ fn handle_events() -> Result<bool> {
     Ok(false)
 }
 
-fn render_start_page<B>(frame: &mut Frame) {
-
-    let feeds = get_feeds().expect("Cannot connect to database");
-
-    let mut feed_titles = Vec::new();
-
-    for feed in feeds {
-
-        let Some(title) = feed.title else {
-            continue;
-        };
-
-        feed_titles.push(title);
-    }
-
-    let mut feed_list = FeedList::new();
-    feed_list.set_items(feed_titles);
-    feed_list.state.select(Some(0));
-
+pub fn render_start_page(frame: &mut Frame, app: &App) {
 
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -174,31 +149,65 @@ fn render_start_page<B>(frame: &mut Frame) {
         ])
         .split(main_layout[1]);
 
+    if app.is_loading {
+        frame.render_widget(
+            Paragraph::new("Crabfeed - loading...")
+                .block(Block::default()
+                .title("Greeting")
+                .borders(Borders::ALL)),
+            main_layout[0],
+        );
+    }
+    else {
+        frame.render_widget(
+            Paragraph::new("Crabfeed")
+                .block(Block::default()
+                .title("Greeting")
+                .borders(Borders::ALL)),
+            main_layout[0],
+        );
+
+    }
+
+
+     render_feeds(frame, app, info_layout[0]);
+
+    // frame.render_widget(
+    //     Paragraph::new("Feeds")
+    //         .block(Block::default()
+    //         .title("Feeds")
+    //         .borders(Borders::ALL)),
+    //     info_layout[0]
+    // );
+
     frame.render_widget(
-        Paragraph::new("Crabfeed")
+        Paragraph::new("Entries")
             .block(Block::default()
-            .title("Greeting")
+            .title("Entries")
             .borders(Borders::ALL)),
-        main_layout[0],
+        info_layout[1]
     );
 
-    render_feeds(frame, &mut feed_list, info_layout[0]);
-
-    let curr_feed = select_feed(feed_list.items.iter().nth(0).expect("Error reading feed")).expect("Error finding feed");
-
-    render_entries(frame, curr_feed, info_layout[1]);
+    // render_entries(frame, app, info_layout[1]);
 
 }
 
-fn render_feeds(frame: &mut Frame, feeds: &mut FeedList, area: Rect) {
+fn render_feeds(frame: &mut Frame, app: &App, area: Rect) {
 
-    let items: Vec<ListItem> = feeds
-        .items
+    let mut items: Vec<String> = app.feeds
         .iter()
-        .map(|i| ListItem::new(i.as_str()))
+        .map(|f| f.title.clone().unwrap_or("No Title".to_string()))
         .collect();
 
-    let list = List::new(items);
+    if items.is_empty() {
+        items.push("No feeds available".to_string());
+    }
+
+    let mut feed_list = FeedList::new();
+    feed_list.set_items(items);
+    feed_list.state.select(Some(0));
+
+    let list = List::new(feed_list.items.clone());
 
     frame.render_stateful_widget(
         list.block(
@@ -207,45 +216,48 @@ fn render_feeds(frame: &mut Frame, feeds: &mut FeedList, area: Rect) {
             .borders(Borders::ALL)
         ),
         area,
-        &mut feeds.state
+        &mut feed_list.state,
     );
 }
 
-fn render_entries(frame: &mut Frame, feed: Feed, area: Rect) {
+// fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
 
-    let entries = get_entries(&feed).expect("Cannot connect to database");
+//     let feed_indx = app.selected_feed_index.unwrap_or(0);
+//     let feed = app.feeds.get(feed_indx);
 
-    let mut entry_titles = Vec::new();
+//     let entries = get_entries(&feed).expect("Cannot connect to database");
 
-    for entry in entries {
+//     let mut entry_titles = Vec::new();
 
-        let Some(title) = entry.title else {
-            continue;
-        };
+//     for entry in entries {
 
-        entry_titles.push(title);
-    }
+//         let Some(title) = entry.title else {
+//             continue;
+//         };
 
-    let mut entry_list = EntryList::new();
-    entry_list.set_items(entry_titles);
-    entry_list.state.select(Some(0));
+//         entry_titles.push(title);
+//     }
+
+//     let mut entry_list = EntryList::new();
+//     entry_list.set_items(entry_titles);
+//     entry_list.state.select(Some(0));
 
 
-    let items: Vec<ListItem> = entry_list
-        .items
-        .iter()
-        .map(|i| ListItem::new(i.as_str()))
-        .collect();
+//     let items: Vec<ListItem> = entry_list
+//         .items
+//         .iter()
+//         .map(|i| ListItem::new(i.as_str()))
+//         .collect();
 
-    let list = List::new(items);
+//     let list = List::new(items);
 
-    frame.render_stateful_widget(
-        list.block(
-            Block::default()
-            .title("Entries")
-            .borders(Borders::ALL)
-        ),
-        area,
-        &mut entry_list.state
-    );
-}
+//     frame.render_stateful_widget(
+//         list.block(
+//             Block::default()
+//             .title("Entries")
+//             .borders(Borders::ALL)
+//         ),
+//         area,
+//         &mut entry_list.state
+//     );
+// }

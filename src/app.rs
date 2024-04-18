@@ -1,7 +1,7 @@
 use ratatui::layout::Rect;
 use std::sync::mpsc::Sender;
 
-use feed_rs::model::Feed;
+use crate::prelude::Feed;
 
 use crate::network::IOEvent;
 
@@ -61,10 +61,10 @@ impl App {
         self.is_loading = true;
         if let Some(tx) = &self.io_tx {
             if let Err(e) = tx.send(event) {
+                self.is_loading = false;
                 eprintln!("Error sending IOEvent: {:?}", e);
             };
         }
-
     }
 
     pub fn push_navigation_stack(&mut self, next_route_id: RouteId) {
@@ -83,5 +83,10 @@ impl App {
 
     pub fn get_current_route(&self) -> &Route {
         self.navigation_stack.last().unwrap_or(&DEFAULT_ROUTE)
+    }
+
+    pub fn _update_on_tick(&mut self) {
+        // There are no events that happen each tick
+        // but there might be in the future ...
     }
 }

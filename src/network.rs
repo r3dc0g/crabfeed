@@ -4,13 +4,12 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::control::get_feed;
-use crate::db;
+use crate::db::{self, find_feed_link, get_feeds, insert_feed};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 pub enum IOEvent {
     FetchFeeds,
-
 }
 
 pub struct Network<'a> {
@@ -35,37 +34,41 @@ impl<'a> Network<'a> {
     async fn update_feeds(&self) -> Result<()> {
         let mut app = self.app.lock().await;
 
+        let connection = &mut db::connect()?;
+
         // Grab the feeds from the app state
         let feeds = &app.feeds;
+
+        if feeds.is_empty() {
+
+            // Fetch feeds from the database
+            app.feeds = get_feeds()?;
+            app.is_loading = false;
+            return Ok(());
+        }
+
         let mut new_feeds = vec![];
 
         // Fetch the feed model for each feed
         for feed in feeds {
-            let links = &feed.links;
-            for link in links {
-                let link = &link.href;
-                let feed = match get_feed(link).await {
-                    Ok(feed) => feed,
+            let link = find_feed_link(feed.id)?;
 
-                    // dont add feed if we cant fetch it
-                    Err(_) => continue,
-                };
-                new_feeds.push(feed);
-            }
+            let Ok(feed) = get_feed(link.href).await else {
+                continue;
+            };
+
+            new_feeds.push(feed);
+
         }
-
-        // Update the app state
-        app.feeds = new_feeds;
 
         //Update the database
-        for feed in &app.feeds {
-            let connection = &mut db::connect()?;
-
-            // Skip if feed already exists
-            if let Err(_) = db::insert_feed(connection, feed.clone()) {
-                continue;
-            }
+        for feed in new_feeds {
+            insert_feed(connection, feed)?
         }
+        // Update the app state
+        app.feeds = get_feeds()?;
+
+        app.is_loading = false;
 
         Ok(())
     }

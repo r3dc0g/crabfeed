@@ -68,17 +68,30 @@ pub fn get_feeds() -> Result<Vec<Feed>> {
 
 }
 
-pub fn select_feed(feed_name: &String) -> Result<Feed> {
+pub fn select_feed(feed_id: &i32) -> Result<Feed> {
 
     let conn = &mut connect()?;
 
     let result = feed::table
-        .filter(feed::title.eq(feed_name))
+        .filter(feed::id.eq(feed_id))
         .select(Feed::as_select())
         .get_result(conn)?;
 
     Ok(result)
 
+}
+
+pub fn find_feed_link(feed_id: i32) -> Result<Link> {
+
+    let conn = &mut connect()?;
+
+    let result = feed::table
+        .inner_join(feed_link::table.inner_join(link::table))
+        .filter(feed::id.eq(feed_id))
+        .select(Link::as_select())
+        .get_result(conn)?;
+
+    Ok(result)
 }
 
 pub fn get_entries(curr_feed: &Feed) -> Result<Vec<Entry>> {
