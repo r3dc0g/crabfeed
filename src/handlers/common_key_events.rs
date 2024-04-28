@@ -19,7 +19,7 @@ pub fn right_event(key: Key) -> bool {
 }
 
 pub fn high_event(key: Key) -> bool {
-    matches!(key, Key::Char('H'))
+    matches!(key, Key::Char('g'))
 }
 
 pub fn middle_event(key: Key) -> bool {
@@ -27,7 +27,7 @@ pub fn middle_event(key: Key) -> bool {
 }
 
 pub fn low_event(key: Key) -> bool {
-    matches!(key, Key::Char('L'))
+    matches!(key, Key::Char('G'))
 }
 
 pub fn on_down_press_handler<T>(selection_data: &[T], selection_index: Option<usize>) -> usize {
