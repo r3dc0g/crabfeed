@@ -92,20 +92,11 @@ impl App {
             (e.title.clone().unwrap_or("No Title".to_string()), e.id)
         })
         .collect();
-
-    }
-
-    pub fn set_entry_items(&mut self, entry_items: Vec<Entry>) {
-        self.entry_items = entry_items.iter().map(|e| {
-            (e.title.clone().unwrap_or("No title".to_string()).clone(), e.id)
-        })
-        .collect();
+        self.selected_entry_index = None;
     }
 
     pub fn push_navigation_stack(&mut self, next_route_id: RouteId, next_active_block: ActiveBlock) {
-        if !self.navigation_stack.last().map(|r| r.id == next_route_id).unwrap_or(false) {
-            self.navigation_stack.push(Route { id: next_route_id, active_block: next_active_block});
-        }
+        self.navigation_stack.push(Route { id: next_route_id, active_block: next_active_block});
     }
 
     pub fn pop_navigation_stack(&mut self) -> Option<Route> {
@@ -117,8 +108,11 @@ impl App {
     }
 
     pub fn get_current_route(&self) -> &Route {
-        // self.navigation_stack.last().unwrap_or(&DEFAULT_ROUTE)
-        &DEFAULT_ROUTE
+        self.navigation_stack.last().unwrap_or(&DEFAULT_ROUTE)
+    }
+
+    pub fn set_current_route(&mut self, route: RouteId, active_block: ActiveBlock) {
+        self.push_navigation_stack(route, active_block);
     }
 
     pub fn _update_on_tick(&mut self) {

@@ -1,5 +1,5 @@
 use crate::{db::select_entries, error::Error};
-use crate::app::App;
+use crate::app::{ActiveBlock, App};
 use ratatui::prelude::*;
 
 use crossterm::event::{self, Event, KeyCode};
@@ -127,11 +127,18 @@ fn render_feeds(frame: &mut Frame, app: &App, area: Rect) {
 
     let list = List::new(feed_list.items.clone());
 
+    let mut style = Style::default();
+
+    if app.get_current_route().active_block == ActiveBlock::Feeds {
+        style = style.fg(Color::Red);
+    }
+
     frame.render_stateful_widget(
         list.block(
             Block::default()
             .title("Feeds")
             .borders(Borders::ALL)
+            .border_style(style)
         )
         .highlight_style(
                 Style::default()
@@ -148,15 +155,22 @@ fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
 
     let mut entry_list = FeedList::new();
     entry_list.set_items(titles.clone());
-    entry_list.state.select(Some(0));
+    entry_list.state.select(app.selected_entry_index);
 
     let list = List::new(entry_list.items.clone());
+
+    let mut style = Style::default();
+
+    if app.get_current_route().active_block == ActiveBlock::Entries {
+        style = style.fg(Color::Red);
+    }
 
     frame.render_stateful_widget(
         list.block(
             Block::default()
             .title("Entries")
             .borders(Borders::ALL)
+            .border_style(style)
         )
         .highlight_style(
                 Style::default()
