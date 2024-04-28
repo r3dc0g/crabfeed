@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::{db::select_entries, error::Error};
 use crate::app::App;
 use ratatui::prelude::*;
 
@@ -9,6 +9,7 @@ use crossterm::event::{self, Event, KeyCode};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    style::{Style, Color},
     Frame,
 };
 
@@ -32,37 +33,6 @@ impl FeedList {
         self.state = ListState::default();
     }
 
-    pub fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    pub fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    pub fn unselect(&mut self) {
-        self.state.select(None);
-    }
 }
 
 #[derive(Default)]
@@ -82,37 +52,6 @@ impl EntryList {
        self.state = ListState::default();
     }
 
-    pub fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    pub fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    pub fn unselect(&mut self) {
-        self.state.select(None);
-    }
 }
 
 
@@ -170,42 +109,21 @@ pub fn render_start_page(frame: &mut Frame, app: &App) {
     }
 
 
-     render_feeds(frame, app, info_layout[0]);
+    render_feeds(frame, app, info_layout[0]);
 
-    // frame.render_widget(
-    //     Paragraph::new("Feeds")
-    //         .block(Block::default()
-    //         .title("Feeds")
-    //         .borders(Borders::ALL)),
-    //     info_layout[0]
-    // );
 
-    frame.render_widget(
-        Paragraph::new("Entries")
-            .block(Block::default()
-            .title("Entries")
-            .borders(Borders::ALL)),
-        info_layout[1]
-    );
-
-    // render_entries(frame, app, info_layout[1]);
+    render_entries(frame, app, info_layout[1]);
 
 }
 
 fn render_feeds(frame: &mut Frame, app: &App, area: Rect) {
 
-    let mut items: Vec<String> = app.feeds
-        .iter()
-        .map(|f| f.title.clone().unwrap_or("No Title".to_string()))
-        .collect();
-
-    if items.is_empty() {
-        items.push("No feeds available".to_string());
-    }
+    // Very fun code that separtes the feed item tuples into two vectors
+    let (titles, _): (Vec<String>, Vec<i32>) = app.feed_items.clone().into_iter().map(|(title, id)| (title, id)).unzip();
 
     let mut feed_list = FeedList::new();
-    feed_list.set_items(items);
-    feed_list.state.select(Some(0));
+    feed_list.set_items(titles);
+    feed_list.state.select(app.selected_feed_index);
 
     let list = List::new(feed_list.items.clone());
 
@@ -214,50 +132,37 @@ fn render_feeds(frame: &mut Frame, app: &App, area: Rect) {
             Block::default()
             .title("Feeds")
             .borders(Borders::ALL)
+        )
+        .highlight_style(
+                Style::default()
+                    .bg(Color::Red)
         ),
         area,
         &mut feed_list.state,
     );
 }
 
-// fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
+fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
 
-//     let feed_indx = app.selected_feed_index.unwrap_or(0);
-//     let feed = app.feeds.get(feed_indx);
+    let (titles, _): (Vec<String>, Vec<i32>) = app.entry_items.clone().into_iter().map(|(title, id)| (title, id)).unzip();
 
-//     let entries = get_entries(&feed).expect("Cannot connect to database");
+    let mut entry_list = FeedList::new();
+    entry_list.set_items(titles.clone());
+    entry_list.state.select(Some(0));
 
-//     let mut entry_titles = Vec::new();
+    let list = List::new(entry_list.items.clone());
 
-//     for entry in entries {
-
-//         let Some(title) = entry.title else {
-//             continue;
-//         };
-
-//         entry_titles.push(title);
-//     }
-
-//     let mut entry_list = EntryList::new();
-//     entry_list.set_items(entry_titles);
-//     entry_list.state.select(Some(0));
-
-
-//     let items: Vec<ListItem> = entry_list
-//         .items
-//         .iter()
-//         .map(|i| ListItem::new(i.as_str()))
-//         .collect();
-
-//     let list = List::new(items);
-
-//     frame.render_stateful_widget(
-//         list.block(
-//             Block::default()
-//             .title("Entries")
-//             .borders(Borders::ALL)
-//         ),
-//         area,
-//         &mut entry_list.state
-//     );
-// }
+    frame.render_stateful_widget(
+        list.block(
+            Block::default()
+            .title("Entries")
+            .borders(Borders::ALL)
+        )
+        .highlight_style(
+                Style::default()
+                    .bg(Color::Red)
+        ),
+        area,
+        &mut entry_list.state
+    );
+}

@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     let cloned_app = Arc::clone(&app);
     std::thread::spawn(move || {
       let mut network = Network::new(&app);
-      start_tokio(sync_io_rx, &mut network);
+      start_tokio(sync_io_rx, &mut network).unwrap();
     });
 
     start_ui(&cloned_app).await?;
@@ -61,10 +61,12 @@ async fn main() -> Result<()> {
 }
 
 #[tokio::main]
-async fn start_tokio<'a>(io_rx: std::sync::mpsc::Receiver<IOEvent>, network: &mut Network) {
+async fn start_tokio<'a>(io_rx: std::sync::mpsc::Receiver<IOEvent>, network: &mut Network) -> Result<()> {
     while let Ok(io_event) = io_rx.recv() {
-        network.handle_io_event(io_event).await;
+        network.handle_io_event(io_event).await?;
     }
+
+    Ok(())
 }
 
 async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {

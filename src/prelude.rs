@@ -8,7 +8,7 @@ use crate::schema::*;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-#[derive(Queryable, Selectable, Identifiable, Debug, PartialEq)]
+#[derive(Clone, Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = feed)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Feed {
@@ -102,7 +102,7 @@ impl FeedBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Identifiable, Associations, Debug, PartialEq)]
+#[derive(Clone, Queryable, Selectable, Identifiable, Associations, Debug, PartialEq)]
 #[diesel(belongs_to(Feed, foreign_key = feed_id))]
 #[diesel(table_name = entry)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
@@ -209,7 +209,7 @@ impl EntryBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Identifiable, Debug, PartialEq)]
+#[derive(Clone, Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = author)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Author {
@@ -368,7 +368,7 @@ impl EntryAuthorBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug, Identifiable)]
+#[derive(Clone, Queryable, Selectable, Debug, Identifiable)]
 #[diesel(table_name = link)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Link {
@@ -568,7 +568,7 @@ impl EntryLinkBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug, Identifiable)]
+#[derive(Clone, Queryable, Selectable, Debug, Identifiable)]
 #[diesel(table_name = category)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Category {
@@ -726,7 +726,7 @@ impl EntryCategoryBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug, Identifiable)]
+#[derive(Clone, Queryable, Selectable, Debug, Identifiable)]
 #[diesel(table_name = content)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Content {

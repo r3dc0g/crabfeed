@@ -110,6 +110,19 @@ pub fn get_entries(curr_feed: &Feed) -> Result<Vec<Entry>> {
     Ok(entries)
 }
 
+pub fn select_entries(feed_id: i32) -> Result<Vec<Entry>> {
+
+    let conn = &mut connect()?;
+
+    let entries = entry::table
+        .filter(entry::feed_id.eq(feed_id))
+        .select(Entry::as_select())
+        .load(conn)?;
+
+    Ok(entries)
+
+}
+
 fn insert_entries(
         conn: &mut SqliteConnection,
         entries: Vec<model::Entry>,

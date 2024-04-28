@@ -24,7 +24,9 @@ impl<'a> Network<'a> {
     // Handle IOEvent
     pub async fn handle_io_event(&self, event: IOEvent) -> Result<()> {
         match event {
-            IOEvent::FetchFeeds => self.update_feeds().await?,
+            IOEvent::FetchFeeds => {
+                self.update_feeds().await?;
+            }
         }
 
         Ok(())
@@ -34,15 +36,12 @@ impl<'a> Network<'a> {
     async fn update_feeds(&self) -> Result<()> {
         let mut app = self.app.lock().await;
 
-        let connection = &mut db::connect()?;
-
         // Grab the feeds from the app state
-        let feeds = &app.feeds;
+        let feed_items = &app.feed_items;
 
-        if feeds.is_empty() {
-
+        if feed_items.is_empty() {
             // Fetch feeds from the database
-            app.feeds = get_feeds()?;
+            app.set_feed_items(get_feeds()?);
             app.is_loading = false;
             return Ok(());
         }
@@ -50,23 +49,24 @@ impl<'a> Network<'a> {
         let mut new_feeds = vec![];
 
         // Fetch the feed model for each feed
-        for feed in feeds {
+        for feed in get_feeds()?.iter() {
             let link = find_feed_link(feed.id)?;
 
-            let Ok(feed) = get_feed(link.href).await else {
-                continue;
+            if let Ok(feed) = get_feed(link.href).await {
+                new_feeds.push(feed);
             };
 
-            new_feeds.push(feed);
-
         }
+
+        let connection = &mut db::connect()?;
 
         //Update the database
         for feed in new_feeds {
             insert_feed(connection, feed)?
         }
+
         // Update the app state
-        app.feeds = get_feeds()?;
+        app.set_feed_items(get_feeds()?);
 
         app.is_loading = false;
 
