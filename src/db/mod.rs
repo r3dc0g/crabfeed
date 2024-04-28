@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
 use crate::prelude::*;
@@ -36,19 +34,96 @@ pub fn insert_feed(
         .published(feed.published)
         .build()?;
 
+    let found_feed = feed::table
+        .filter(feed::title.eq(&new_feed.title))
+        .select(Feed::as_select())
+        .get_result(conn);
+
+    if found_feed.is_ok() {
+        return Err(Error::Static("Feed already exists"));
+    }
+
     let ret_feed: Feed = diesel::insert_into(feed::table)
         .values(&new_feed)
         .returning(Feed::as_returning())
         .get_result(conn)?;
 
-    insert_authors(conn, feed.authors, Some(ret_feed.feed_id), None)?;
-    insert_links(conn, feed.links, Some(ret_feed.feed_id), None)?;
-    insert_entries(conn, feed.entries, ret_feed.feed_id)?;
+    insert_authors(conn, feed.authors, Some(ret_feed.id), None)?;
+    insert_links(conn, feed.links, Some(ret_feed.id), None)?;
+    insert_entries(conn, feed.entries, ret_feed.id)?;
 
     Ok(())
 }
 
-pub fn insert_entries(
+pub fn get_feeds() -> Result<Vec<Feed>> {
+
+    use crate::schema::feed::dsl::*;
+
+    let conn = &mut connect()?;
+
+    let results = feed
+        .load::<Feed>(conn)?;
+
+    Ok(results)
+
+}
+
+pub fn select_feed(feed_id: &i32) -> Result<Feed> {
+
+    let conn = &mut connect()?;
+
+    let result = feed::table
+        .filter(feed::id.eq(feed_id))
+        .select(Feed::as_select())
+        .get_result(conn)?;
+
+    Ok(result)
+
+}
+
+pub fn find_feed_link(feed_id: i32) -> Result<Link> {
+
+    let conn = &mut connect()?;
+
+    let result = feed::table
+        .inner_join(feed_link::table.inner_join(link::table))
+        .filter(feed::id.eq(feed_id))
+        .select(Link::as_select())
+        .get_result(conn)?;
+
+    Ok(result)
+}
+
+pub fn get_entries(curr_feed: &Feed) -> Result<Vec<Entry>> {
+
+    let conn = &mut connect()?;
+
+    let feed_id = feed::table
+        .filter(feed::title.eq(&curr_feed.title))
+        .select(Feed::as_select())
+        .get_result(conn)?;
+
+    let entries = Entry::belonging_to(&feed_id)
+        .select(Entry::as_select())
+        .load(conn)?;
+
+    Ok(entries)
+}
+
+pub fn select_entries(feed_id: i32) -> Result<Vec<Entry>> {
+
+    let conn = &mut connect()?;
+
+    let entries = entry::table
+        .filter(entry::feed_id.eq(feed_id))
+        .select(Entry::as_select())
+        .load(conn)?;
+
+    Ok(entries)
+
+}
+
+fn insert_entries(
         conn: &mut SqliteConnection,
         entries: Vec<model::Entry>,
         feed_id: i32
@@ -74,15 +149,15 @@ pub fn insert_entries(
             .returning(Entry::as_returning())
             .get_result(conn)?;
 
-        insert_authors(conn, entry.authors, None, Some(ret_entry.entry_id))?;
-        insert_links(conn, entry.links, None, Some(ret_entry.entry_id))?;
+        insert_authors(conn, entry.authors, None, Some(ret_entry.id))?;
+        insert_links(conn, entry.links, None, Some(ret_entry.id))?;
 
     }
 
     Ok(())
 }
 
-pub fn insert_authors(
+fn insert_authors(
         conn: &mut SqliteConnection,
         authors: Vec<model::Person>,
         feed_id: Option<i32>,
@@ -113,7 +188,7 @@ pub fn insert_authors(
             let mut ea_builder = EntryAuthorBuilder::new();
 
             let entry_author = ea_builder
-                .author_id(ret_author.author_id)
+                .author_id(ret_author.id)
                 .entry_id(e_id)
                 .build()?;
 
@@ -127,7 +202,7 @@ pub fn insert_authors(
         let mut fa_builder = FeedAuthorBuilder::new();
 
         let feed_author = fa_builder
-            .author_id(ret_author.author_id)
+            .author_id(ret_author.id)
             .feed_id(f_id)
             .build()?;
 
@@ -139,7 +214,7 @@ pub fn insert_authors(
     Ok(())
 }
 
-pub fn insert_links(
+fn insert_links(
         conn: &mut SqliteConnection,
         links: Vec<model::Link>,
         feed_id: Option<i32>,
@@ -172,7 +247,7 @@ pub fn insert_links(
             let mut el_builder = EntryLinkBuilder::new();
 
             let entry_link = el_builder
-                .link_id(ret_link.link_id)
+                .link_id(ret_link.id)
                 .entry_id(e_id)
                 .build()?;
 
@@ -186,7 +261,7 @@ pub fn insert_links(
         let mut fl_builder = FeedLinkBuilder::new();
 
         let feed_link = fl_builder
-            .link_id(ret_link.link_id)
+            .link_id(ret_link.id)
             .feed_id(f_id)
             .build()?;
 
@@ -199,7 +274,7 @@ pub fn insert_links(
     Ok(())
 }
 
-pub fn insert_categories(
+fn insert_categories(
         conn: &mut SqliteConnection,
         categories: Vec<model::Category>,
         feed_id: Option<i32>,
@@ -230,7 +305,7 @@ pub fn insert_categories(
             let mut ec_builder = EntryCategoryBuilder::new();
 
             let entry_category = ec_builder
-                .category_id(ret_category.category_id)
+                .category_id(ret_category.id)
                 .entry_id(e_id)
                 .build()?;
 
@@ -244,7 +319,7 @@ pub fn insert_categories(
         let mut fc_builder = FeedCategoryBuilder::new();
 
         let feed_category = fc_builder
-            .category_id(ret_category.category_id)
+            .category_id(ret_category.id)
             .feed_id(f_id)
             .build()?;
 
@@ -280,7 +355,7 @@ fn insert_content(
             .returning(Content::as_returning())
             .get_result(conn)?;
 
-        return Ok(Some(ret_content.content_id));
+        return Ok(Some(ret_content.id));
 
     };
 
@@ -305,7 +380,7 @@ fn insert_content(
         .body(content.body)
         .content_type(content.content_type)
         .length(content.length)
-        .src(Some(ret_link.link_id))
+        .src(Some(ret_link.id))
         .build()?;
 
     let ret_content = diesel::insert_into(content::table)
@@ -313,5 +388,5 @@ fn insert_content(
         .returning(Content::as_returning())
         .get_result(conn)?;
 
-    Ok(Some(ret_content.content_id))
+    Ok(Some(ret_content.id))
 }

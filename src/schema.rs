@@ -1,8 +1,8 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    author (author_id) {
-        author_id -> Integer,
+    author (id) {
+        id -> Integer,
         name -> Text,
         uri -> Nullable<Text>,
         email -> Nullable<Text>,
@@ -10,8 +10,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    category (category_id) {
-        category_id -> Integer,
+    category (id) {
+        id -> Integer,
         term -> Text,
         scheme -> Nullable<Text>,
         label -> Nullable<Text>,
@@ -19,8 +19,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    content (content_id) {
-        content_id -> Integer,
+    content (id) {
+        id -> Integer,
         body -> Nullable<Text>,
         content_type -> Nullable<Text>,
         length -> Nullable<BigInt>,
@@ -29,8 +29,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    entry (entry_id) {
-        entry_id -> Integer,
+    entry (id) {
+        id -> Integer,
         feed_id -> Integer,
         title -> Nullable<Text>,
         updated -> Nullable<Timestamp>,
@@ -41,29 +41,32 @@ diesel::table! {
 }
 
 diesel::table! {
-    entry_author (author_id, entry_id) {
+    entry_author (id) {
+        id -> Integer,
         author_id -> Integer,
         entry_id -> Integer,
     }
 }
 
 diesel::table! {
-    entry_category (category_id, entry_id) {
+    entry_category (id) {
+        id -> Integer,
         category_id -> Integer,
         entry_id -> Integer,
     }
 }
 
 diesel::table! {
-    entry_link (link_id, entry_id) {
+    entry_link (id) {
+        id -> Integer,
         link_id -> Integer,
         entry_id -> Integer,
     }
 }
 
 diesel::table! {
-    feed (feed_id) {
-        feed_id -> Integer,
+    feed (id) {
+        id -> Integer,
         title -> Nullable<Text>,
         updated -> Nullable<Timestamp>,
         description -> Nullable<Text>,
@@ -73,29 +76,32 @@ diesel::table! {
 }
 
 diesel::table! {
-    feed_author (author_id, feed_id) {
+    feed_author (id) {
+        id -> Integer,
         author_id -> Integer,
         feed_id -> Integer,
     }
 }
 
 diesel::table! {
-    feed_category (category_id, feed_id) {
+    feed_category (id) {
+        id -> Integer,
         category_id -> Integer,
         feed_id -> Integer,
     }
 }
 
 diesel::table! {
-    feed_link (link_id, feed_id) {
+    feed_link (id) {
+        id -> Integer,
         link_id -> Integer,
         feed_id -> Integer,
     }
 }
 
 diesel::table! {
-    link (link_id) {
-        link_id -> Integer,
+    link (id) {
+        id -> Integer,
         href -> Text,
         rel -> Nullable<Text>,
         media_type -> Nullable<Text>,
@@ -105,8 +111,6 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(content -> link (src));
-diesel::joinable!(entry -> content (content_id));
 diesel::joinable!(entry -> feed (feed_id));
 diesel::joinable!(entry_author -> author (author_id));
 diesel::joinable!(entry_author -> entry (entry_id));

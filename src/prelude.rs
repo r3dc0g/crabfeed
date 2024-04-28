@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use chrono::NaiveDateTime;
 use feed_rs::model::Text;
 use chrono::{DateTime, Utc};
@@ -9,11 +8,11 @@ use crate::schema::*;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Clone, Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = feed)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Feed {
-    pub feed_id: i32,
+    pub id: i32,
     pub title: Option<String>,
     pub updated: Option<NaiveDateTime>,
     pub description: Option<String>,
@@ -103,11 +102,12 @@ impl FeedBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Clone, Queryable, Selectable, Identifiable, Associations, Debug, PartialEq)]
+#[diesel(belongs_to(Feed, foreign_key = feed_id))]
 #[diesel(table_name = entry)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Entry {
-    pub entry_id: i32,
+    pub id: i32,
     pub feed_id: i32,
     pub title: Option<String>,
     pub updated: Option<NaiveDateTime>,
@@ -209,11 +209,11 @@ impl EntryBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Clone, Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = author)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Author {
-    pub author_id: i32,
+    pub id: i32,
     pub name: String,
     pub uri: Option<String>,
     pub email: Option<String>,
@@ -274,10 +274,13 @@ impl AuthorBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Queryable, Selectable, Identifiable, Associations, Debug, PartialEq)]
+#[diesel(belongs_to(Feed))]
+#[diesel(belongs_to(Author))]
 #[diesel(table_name = feed_author)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct FeedAuthor {
+    pub id: i32,
     pub author_id: i32,
     pub feed_id: i32,
 }
@@ -318,10 +321,13 @@ impl FeedAuthorBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Queryable, Selectable, Debug, Identifiable, Associations)]
+#[diesel(belongs_to(Entry))]
+#[diesel(belongs_to(Author))]
 #[diesel(table_name = entry_author)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct EntryAuthor {
+    pub id: i32,
     pub author_id: i32,
     pub entry_id: i32,
 }
@@ -362,11 +368,11 @@ impl EntryAuthorBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Clone, Queryable, Selectable, Debug, Identifiable)]
 #[diesel(table_name = link)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Link {
-    pub link_id: i32,
+    pub id: i32,
     pub href: String,
     pub rel: Option<String>,
     pub media_type: Option<String>,
@@ -468,10 +474,13 @@ impl LinkBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Queryable, Selectable, Debug, Associations, Identifiable)]
+#[diesel(belongs_to(Feed))]
+#[diesel(belongs_to(Link))]
 #[diesel(table_name = feed_link)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct FeedLink {
+    pub id: i32,
     pub link_id: i32,
     pub feed_id: i32,
 }
@@ -512,10 +521,13 @@ impl FeedLinkBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Queryable, Selectable, Debug, Identifiable, Associations)]
+#[diesel(belongs_to(Entry))]
+#[diesel(belongs_to(Link))]
 #[diesel(table_name = entry_link)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct EntryLink {
+    pub id: i32,
     pub link_id: i32,
     pub entry_id: i32,
 }
@@ -556,11 +568,11 @@ impl EntryLinkBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Clone, Queryable, Selectable, Debug, Identifiable)]
 #[diesel(table_name = category)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Category {
-    pub category_id: i32,
+    pub id: i32,
     pub term: String,
     pub scheme: Option<String>,
     pub label: Option<String>,
@@ -620,10 +632,13 @@ impl CategoryBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Queryable, Selectable, Debug, Identifiable, Associations)]
+#[diesel(belongs_to(Feed))]
+#[diesel(belongs_to(Category))]
 #[diesel(table_name = feed_category)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct FeedCategory {
+    pub id: i32,
     pub category_id: i32,
     pub feed_id: i32,
 }
@@ -664,10 +679,13 @@ impl FeedCategoryBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Queryable, Selectable, Debug, Identifiable, Associations)]
+#[diesel(belongs_to(Entry))]
+#[diesel(belongs_to(Category))]
 #[diesel(table_name = entry_category)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct EntryCategory {
+    pub id: i32,
     pub category_id: i32,
     pub entry_id: i32,
 }
@@ -708,11 +726,11 @@ impl EntryCategoryBuilder {
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Clone, Queryable, Selectable, Debug, Identifiable)]
 #[diesel(table_name = content)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Content {
-    pub content_id: i32,
+    pub id: i32,
     pub body: Option<String>,
     pub content_type: Option<String>,
     pub length: Option<i64>,
