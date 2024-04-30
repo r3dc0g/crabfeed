@@ -18,6 +18,10 @@ pub fn right_event(key: Key) -> bool {
     matches!(key, Key::Right | Key::Char('l') | Key::Ctrl('f'))
 }
 
+pub fn select_event(key: Key) -> bool {
+    matches!(key, Key::Char(' ') | Key::Enter )
+}
+
 pub fn high_event(key: Key) -> bool {
     matches!(key, Key::Char('g'))
 }
@@ -63,30 +67,4 @@ pub fn on_up_press_handler<T>(selection_data: &[T], selection_index: Option<usiz
     }
 }
 
-pub fn on_high_press_handler() -> usize {
-  0
-}
-
-pub fn on_middle_press_handler<T>(selection_data: &[T]) -> usize {
-  let mut index = selection_data.len() / 2;
-  if selection_data.len() % 2 == 0 {
-    index -= 1;
-  }
-  index
-}
-
-pub fn on_low_press_handler<T>(selection_data: &[T]) -> usize {
-  selection_data.len() - 1
-}
-
-pub fn handle_right_event(app: &mut App) {
-  match app.get_current_route().active_block {
-        // TODO: Impement right
-    _ => {}
-  };
-}
-
-pub fn handle_left_event(app: &mut App) {
-  // TODO: Possible place for changing back to the feeds list
-}
 

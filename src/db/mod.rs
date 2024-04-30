@@ -81,6 +81,21 @@ pub fn select_feed(feed_id: &i32) -> Result<Feed> {
 
 }
 
+pub fn select_entry(entry_id: &i32) -> Result<Entry> {
+
+    let conn = &mut connect()?;
+
+    use self::entry::dsl::entry;
+
+    let result = entry
+        .find(entry_id)
+        .select(Entry::as_select())
+        .first(conn)?;
+
+    Ok(result)
+
+}
+
 pub fn find_feed_link(feed_id: i32) -> Result<Link> {
 
     let conn = &mut connect()?;
@@ -90,6 +105,19 @@ pub fn find_feed_link(feed_id: i32) -> Result<Link> {
         .filter(feed::id.eq(feed_id))
         .select(Link::as_select())
         .get_result(conn)?;
+
+    Ok(result)
+}
+
+pub fn find_entry_links(entry_id: i32) -> Result<Vec<Link>> {
+
+    let conn = &mut connect()?;
+
+    let result = entry::table
+        .inner_join(entry_link::table.inner_join(link::table))
+        .filter(entry::id.eq(entry_id))
+        .select(Link::as_select())
+        .get_results(conn)?;
 
     Ok(result)
 }
