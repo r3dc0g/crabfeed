@@ -102,6 +102,7 @@ impl App {
     pub fn set_entry(&mut self, entry_id: i32) {
         if let Ok(entry) = select_entry(&entry_id) {
             self.entry = Some(entry);
+            return;
         }
 
         self.entry = None;

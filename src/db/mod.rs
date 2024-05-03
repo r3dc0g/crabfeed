@@ -85,12 +85,10 @@ pub fn select_entry(entry_id: &i32) -> Result<Entry> {
 
     let conn = &mut connect()?;
 
-    use self::entry::dsl::entry;
-
-    let result = entry
-        .find(entry_id)
+    let result = entry::table
+        .filter(entry::id.eq(entry_id))
         .select(Entry::as_select())
-        .first(conn)?;
+        .get_result(conn)?;
 
     Ok(result)
 

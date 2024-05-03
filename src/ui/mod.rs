@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::{db::select_entries, error::Error};
 use crate::app::{ActiveBlock, App, RouteId};
 use diesel::Connection;
@@ -76,26 +78,34 @@ pub fn render_start_page(frame: &mut Frame, app: &App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
-             Constraint::Percentage(10),
-             Constraint::Percentage(90),
+             Constraint::Percentage(3),
+             Constraint::Percentage(97),
         ])
         .split(frame.size());
 
-
     if app.is_loading {
         frame.render_widget(
-            Paragraph::new("Crabfeed - loading...")
-                .block(Block::default()
-                .title("Greeting")
-                .borders(Borders::ALL)),
+            Paragraph::new(
+                Line::from("Crabfeed - loading...")
+                .alignment(Alignment::Center)
+            )
+            .block(
+                Block::default()
+                .borders(Borders::ALL)
+            ),
             main_layout[0],
         );
     }
     else {
         frame.render_widget(
-            Paragraph::new("Crabfeed")
-                .block(Block::default()
-                .borders(Borders::NONE)),
+            Paragraph::new(
+                Line::from("Crabfeed")
+                .alignment(Alignment::Center)
+            )
+            .block(
+                Block::default()
+                .borders(Borders::ALL)
+            ),
             main_layout[0],
         );
 
@@ -167,7 +177,9 @@ fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
     entry_list.set_items(titles.clone());
     entry_list.state.select(app.selected_entry_index);
 
-    let list = List::new(entry_list.items.clone());
+    let list = List::new(entry_list.items.clone().into_iter().map(|item| {
+        Line::styled(item, Style::default())
+    }));
 
     let mut style = Style::default();
 
@@ -197,8 +209,8 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
         Direction::Vertical,
         [
             Constraint::Percentage(10),
-            Constraint::Length(70),
-            Constraint::Length(20),
+            Constraint::Percentage(70),
+            Constraint::Percentage(20),
         ],
     )
     .split(area);
@@ -216,7 +228,7 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
         frame.render_widget(
             Paragraph::new(entry.title.clone().unwrap_or("No Title".to_string()))
                 .block(Block::default()
-                    .borders(Borders::NONE)
+                    .borders(Borders::ALL)
                 ),
             entry_layout[0],
         );
@@ -225,17 +237,19 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
         frame.render_widget(
             Paragraph::new(summary)
                 .block(Block::default()
-                    .borders(Borders::NONE)
+                    .borders(Borders::ALL)
                 ),
             entry_layout[1],
         );
 
         frame.render_widget(
             link_list.block(Block::default()
-                .borders(Borders::NONE)),
+                .title("Links")
+                .borders(Borders::ALL)),
             entry_layout[2],
         );
 
+        return;
     }
 
     frame.render_widget(
