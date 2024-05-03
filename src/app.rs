@@ -2,7 +2,7 @@ use ratatui::layout::Rect;
 use std::sync::mpsc::Sender;
 
 use crate::control::get_feed;
-use crate::db::{get_entries, select_entries, select_feed};
+use crate::db::{find_entry_links, get_entries, select_entries, select_entry, select_feed};
 use crate::prelude::{Feed, Entry};
 
 use crate::network::IOEvent;
@@ -41,6 +41,8 @@ pub struct App {
     pub is_fetching_current_feed: bool,
     pub feed_items: Vec<(String, i32)>,
     pub entry_items: Vec<(String, i32)>,
+    pub entry: Option<Entry>,
+    pub link_items: Vec<(String, i32)>,
 }
 
 impl Default for App {
@@ -55,6 +57,8 @@ impl Default for App {
             is_fetching_current_feed: false,
             feed_items: vec![],
             entry_items: vec![],
+            entry: None,
+            link_items: vec![],
         }
     }
 
@@ -93,6 +97,24 @@ impl App {
         })
         .collect();
         self.selected_entry_index = None;
+    }
+
+    pub fn set_entry(&mut self, entry_id: i32) {
+        if let Ok(entry) = select_entry(&entry_id) {
+            self.entry = Some(entry);
+            return;
+        }
+
+        self.entry = None;
+    }
+
+    pub fn update_link_items(&mut self, entry_id: i32) {
+        let links = find_entry_links(entry_id).unwrap_or(vec![]);
+
+        self.link_items = links.iter().map(|l| {
+            (l.href.clone(), l.id)
+        })
+        .collect();
     }
 
     pub fn push_navigation_stack(&mut self, next_route_id: RouteId, next_active_block: ActiveBlock) {

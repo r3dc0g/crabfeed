@@ -1,5 +1,8 @@
+use std::fmt::Debug;
+
 use crate::{db::select_entries, error::Error};
-use crate::app::{ActiveBlock, App};
+use crate::app::{ActiveBlock, App, RouteId};
+use diesel::Connection;
 use ratatui::prelude::*;
 
 use crossterm::event::{self, Event, KeyCode};
@@ -75,44 +78,61 @@ pub fn render_start_page(frame: &mut Frame, app: &App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
-             Constraint::Percentage(10),
-             Constraint::Percentage(90),
+             Constraint::Percentage(3),
+             Constraint::Percentage(97),
         ])
         .split(frame.size());
 
-    let info_layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(vec![
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
-        .split(main_layout[1]);
-
     if app.is_loading {
         frame.render_widget(
-            Paragraph::new("Crabfeed - loading...")
-                .block(Block::default()
-                .title("Greeting")
-                .borders(Borders::ALL)),
+            Paragraph::new(
+                Line::from("Crabfeed - loading...")
+                .alignment(Alignment::Center)
+            )
+            .block(
+                Block::default()
+                .borders(Borders::ALL)
+            ),
             main_layout[0],
         );
     }
     else {
         frame.render_widget(
-            Paragraph::new("Crabfeed")
-                .block(Block::default()
-                .title("Greeting")
-                .borders(Borders::ALL)),
+            Paragraph::new(
+                Line::from("Crabfeed")
+                .alignment(Alignment::Center)
+            )
+            .block(
+                Block::default()
+                .borders(Borders::ALL)
+            ),
             main_layout[0],
         );
 
     }
 
 
-    render_feeds(frame, app, info_layout[0]);
+    match app.get_current_route().id {
+        RouteId::Home => {
+            let info_layout = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(vec![
+                    Constraint::Percentage(50),
+                    Constraint::Percentage(50),
+                ])
+                .split(main_layout[1]);
+
+            render_feeds(frame, app, info_layout[0]);
 
 
-    render_entries(frame, app, info_layout[1]);
+            render_entries(frame, app, info_layout[1]);
+        }
+        RouteId::Entry => {
+            render_entry(frame, app, main_layout[1]);
+        }
+    }
+
+
 
 }
 
@@ -157,7 +177,9 @@ fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
     entry_list.set_items(titles.clone());
     entry_list.state.select(app.selected_entry_index);
 
-    let list = List::new(entry_list.items.clone());
+    let list = List::new(entry_list.items.clone().into_iter().map(|item| {
+        Line::styled(item, Style::default())
+    }));
 
     let mut style = Style::default();
 
@@ -179,4 +201,66 @@ fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
         area,
         &mut entry_list.state
     );
+}
+
+fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
+
+    let entry_layout = Layout::new(
+        Direction::Vertical,
+        [
+            Constraint::Percentage(10),
+            Constraint::Percentage(70),
+            Constraint::Percentage(20),
+        ],
+    )
+    .split(area);
+
+    let possible_entry = &app.entry;
+
+    if let Some(entry) = possible_entry {
+
+        let (links, _): (Vec<String>, Vec<i32>) = app.link_items.clone().into_iter().map(|(link, id)| (link, id)).unzip();
+
+        let link_list = List::new(links.clone());
+
+        let summary = entry.summary.clone().unwrap_or("No Summary".to_string());
+
+        frame.render_widget(
+            Paragraph::new(entry.title.clone().unwrap_or("No Title".to_string()))
+                .block(Block::default()
+                    .borders(Borders::ALL)
+                ),
+            entry_layout[0],
+        );
+
+
+        frame.render_widget(
+            Paragraph::new(summary)
+                .block(Block::default()
+                    .borders(Borders::ALL)
+                ),
+            entry_layout[1],
+        );
+
+        frame.render_widget(
+            link_list.block(Block::default()
+                .title("Links")
+                .borders(Borders::ALL)),
+            entry_layout[2],
+        );
+
+        return;
+    }
+
+    frame.render_widget(
+        Paragraph::new(
+            Span::raw("Error: No Entry Found")
+        )
+        .block(Block::default()
+            .borders(Borders::ALL)
+        ),
+        area
+    );
+
+
 }
