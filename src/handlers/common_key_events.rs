@@ -1,6 +1,4 @@
 use crate::event::Key;
-use crate::app::App;
-
 
 pub fn down_event(key: Key) -> bool {
     matches!(key, Key::Down | Key::Char('j') | Key::Ctrl('n'))
@@ -20,18 +18,6 @@ pub fn right_event(key: Key) -> bool {
 
 pub fn select_event(key: Key) -> bool {
     matches!(key, Key::Char(' ') | Key::Enter )
-}
-
-pub fn high_event(key: Key) -> bool {
-    matches!(key, Key::Char('g'))
-}
-
-pub fn middle_event(key: Key) -> bool {
-    matches!(key, Key::Char('M'))
-}
-
-pub fn low_event(key: Key) -> bool {
-    matches!(key, Key::Char('G'))
 }
 
 pub fn on_down_press_handler<T>(selection_data: &[T], selection_index: Option<usize>) -> usize {

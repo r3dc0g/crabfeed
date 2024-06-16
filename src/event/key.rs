@@ -129,8 +129,19 @@ impl From<event::KeyEvent> for Key {
 
             event::KeyEvent {
                 code: event::KeyCode::Char(c),
+                modifiers: event::KeyModifiers::CONTROL,
+                ..
+            } => Key::Ctrl(c),
+
+            event::KeyEvent {
+                code: event::KeyCode::Char(c),
                 ..
             } => Key::Char(c),
+
+            event::KeyEvent {
+                code: event::KeyCode::Enter,
+                ..
+            } => Key::Enter,
             _ => Key::Unknown,
         }
     }

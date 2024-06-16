@@ -1,17 +1,12 @@
-use std::fmt::Debug;
-
-use crate::{db::select_entries, error::Error};
+use crate::db::select_content;
+use crate::error::Error;
 use crate::app::{ActiveBlock, App, RouteId};
-use diesel::Connection;
 use ratatui::prelude::*;
 
-use crossterm::event::{self, Event, KeyCode};
-
-// use crate::db::{get_entries, get_feeds, select_feed};
-
+use ratatui::widgets::Wrap;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, List, ListState, Paragraph},
     style::{Style, Color},
     Frame,
 };
@@ -38,79 +33,28 @@ impl FeedList {
 
 }
 
-#[derive(Default)]
-struct EntryList {
-    items: Vec<String>,
-    state: ListState,
-}
-
-impl EntryList {
-    pub fn new() -> EntryList {
-       EntryList::default()
-    }
-
-    pub fn set_items(&mut self, items: Vec<String>) {
-       self.items = items;
-
-       self.state = ListState::default();
-    }
-
-}
-
-
-fn handle_events() -> Result<bool> {
-    if event::poll(std::time::Duration::from_millis(50))? {
-        if let Event::Key(key) = event::read()? {
-            if key.kind == event::KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                return Ok(true);
-            }
-
-            if key.kind == event::KeyEventKind::Press && key.code == KeyCode::Char('j') {
-
-            }
-        }
-    }
-    Ok(false)
-}
-
 pub fn render_start_page(frame: &mut Frame, app: &App) {
 
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
-             Constraint::Percentage(3),
-             Constraint::Percentage(97),
+            Constraint::Length(3),
+            Constraint::Max(100),
+            Constraint::Length(3),
         ])
         .split(frame.size());
 
-    if app.is_loading {
-        frame.render_widget(
-            Paragraph::new(
-                Line::from("Crabfeed - loading...")
-                .alignment(Alignment::Center)
-            )
-            .block(
-                Block::default()
-                .borders(Borders::ALL)
-            ),
-            main_layout[0],
-        );
-    }
-    else {
-        frame.render_widget(
-            Paragraph::new(
-                Line::from("Crabfeed")
-                .alignment(Alignment::Center)
-            )
-            .block(
-                Block::default()
-                .borders(Borders::ALL)
-            ),
-            main_layout[0],
-        );
-
-    }
-
+    frame.render_widget(
+        Paragraph::new(
+            Line::from("Crabfeed")
+            .alignment(Alignment::Center)
+        )
+        .block(
+            Block::default()
+            .borders(Borders::ALL)
+        ),
+        main_layout[0],
+    );
 
     match app.get_current_route().id {
         RouteId::Home => {
@@ -132,7 +76,39 @@ pub fn render_start_page(frame: &mut Frame, app: &App) {
         }
     }
 
+    if app.is_loading {
+        frame.render_widget(
+            Paragraph::new(
+                Line::from("loading...")
+                .alignment(Alignment::Center)
+            )
+            .block(
+                Block::default()
+                .borders(Borders::ALL)
+            ),
+            main_layout[2],
+        );
+    } else {
 
+        if app.get_current_route().active_block == ActiveBlock::Input {
+            render_add_feed(frame, app, main_layout[2])
+        }
+        else {
+            frame.render_widget(
+                Paragraph::new(
+                    Line::from("Ctrl+a to add feed, (Q) to quit")
+                    .alignment(Alignment::Center)
+                )
+                .block(
+                    Block::default()
+                    .borders(Borders::ALL)
+                ),
+                main_layout[2],
+            );
+
+        }
+
+    }
 
 }
 
@@ -217,50 +193,93 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
 
     let possible_entry = &app.entry;
 
-    if let Some(entry) = possible_entry {
+    match possible_entry {
 
-        let (links, _): (Vec<String>, Vec<i32>) = app.link_items.clone().into_iter().map(|(link, id)| (link, id)).unzip();
+        Some(entry) => {
+            let (links, _): (Vec<String>, Vec<i32>) = app.link_items.clone().into_iter().map(|(link, id)| (link, id)).unzip();
 
-        let link_list = List::new(links.clone());
+            let link_list = List::new(links.clone());
 
-        let summary = entry.summary.clone().unwrap_or("No Summary".to_string());
+            let summary = entry.summary.clone().unwrap_or("No Summary".to_string());
 
-        frame.render_widget(
-            Paragraph::new(entry.title.clone().unwrap_or("No Title".to_string()))
+            frame.render_widget(
+                Paragraph::new(entry.title.clone().unwrap_or("No Title".to_string()))
+                    .block(Block::default()
+                        .borders(Borders::ALL)
+                    ),
+                entry_layout[0],
+            );
+
+            match select_content(&entry.content_id.unwrap_or(-1)) {
+                Ok(content) => {
+                    frame.render_widget(
+                        Paragraph::new(content.body.unwrap_or("No Content".to_string()))
+                            .wrap(Wrap::default())
+                            .block(Block::default()
+                                .borders(Borders::ALL)
+                            ),
+                        entry_layout[1],
+                    );
+                }
+                Err(_) => {
+                    frame.render_widget(
+                        Paragraph::new(summary)
+                            .wrap(Wrap::default())
+                            .block(Block::default()
+                                .borders(Borders::ALL)
+                            ),
+                        entry_layout[1],
+                    );
+                }
+            }
+
+            frame.render_widget(
+                link_list.block(Block::default()
+                    .title("Links")
+                    .borders(Borders::ALL)),
+                entry_layout[2],
+            );
+        }
+
+        None => {
+            frame.render_widget(
+                Paragraph::new(
+                    Span::raw("Error: No Entry Found")
+                )
                 .block(Block::default()
                     .borders(Borders::ALL)
                 ),
-            entry_layout[0],
-        );
+                area
+            );
+        }
+    }
+}
 
+fn render_add_feed(frame: &mut Frame, app: &App, area: Rect) {
 
-        frame.render_widget(
-            Paragraph::new(summary)
-                .block(Block::default()
-                    .borders(Borders::ALL)
-                ),
-            entry_layout[1],
-        );
+    let mut style = Style::default();
 
-        frame.render_widget(
-            link_list.block(Block::default()
-                .title("Links")
-                .borders(Borders::ALL)),
-            entry_layout[2],
-        );
-
-        return;
+    if app.get_current_route().active_block == ActiveBlock::Input {
+        style = style.fg(Color::Red);
     }
 
     frame.render_widget(
         Paragraph::new(
-            Span::raw("Error: No Entry Found")
+            Line::from(
+                vec![
+                    Span::raw("URL: ").style(Style::default().bold()),
+                    Span::from(
+                        &app.input.iter().collect::<String>()
+                    ).style(Style::default().underlined())
+                ]
+            )
+            .alignment(Alignment::Left)
         )
-        .block(Block::default()
+        .block(
+            Block::default()
             .borders(Borders::ALL)
+            .border_style(style)
         ),
-        area
+        area,
     );
-
-
 }

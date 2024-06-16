@@ -1,8 +1,7 @@
 use ratatui::layout::Rect;
 use std::sync::mpsc::Sender;
 
-use crate::control::get_feed;
-use crate::db::{find_entry_links, get_entries, select_entries, select_entry, select_feed};
+use crate::db::{find_entry_links, get_feeds, select_entries, select_entry};
 use crate::prelude::{Feed, Entry};
 
 use crate::network::IOEvent;
@@ -18,10 +17,10 @@ pub enum RouteId {
     Entry,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Route {
-    pub id: RouteId,
-    pub active_block: ActiveBlock,
+impl Default for RouteId {
+    fn default() -> Self {
+        RouteId::Home
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,6 +28,19 @@ pub enum ActiveBlock {
     Feeds,
     Entries,
     Entry,
+    Input,
+}
+
+impl Default for ActiveBlock {
+    fn default() -> Self {
+        ActiveBlock::Feeds
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Route {
+    pub id: RouteId,
+    pub active_block: ActiveBlock,
 }
 
 pub struct App {
@@ -37,6 +49,9 @@ pub struct App {
     pub selected_entry_index: Option<usize>,
     pub size: Rect,
     pub is_loading: bool,
+    pub input: Vec<char>,
+    pub input_cursor_position: usize,
+    pub input_i: usize,
     pub io_tx: Option<Sender<IOEvent>>,
     pub is_fetching_current_feed: bool,
     pub feed_items: Vec<(String, i32)>,
@@ -53,6 +68,9 @@ impl Default for App {
             selected_feed_index: None,
             selected_entry_index: None,
             is_loading: false,
+            input: vec![],
+            input_cursor_position: 0,
+            input_i: 0,
             io_tx: None,
             is_fetching_current_feed: false,
             feed_items: vec![],
@@ -87,6 +105,17 @@ impl App {
         self.feed_items = feed_items.iter().map(|f| {
             (f.title.clone().unwrap_or("No title".to_string()).clone(), f.id)
         }).collect();
+    }
+
+    pub fn update_feed_items(&mut self) {
+        self.is_loading = true;
+        if let Ok(feeds) = get_feeds() {
+            self.feed_items = feeds.iter().map(|f| {
+                (f.title.clone().unwrap_or("No title".to_string()).clone(), f.id)
+            }).collect();
+            self.selected_feed_index = None;
+        }
+        self.is_loading = false;
     }
 
     pub fn update_entry_items(&mut self, feed_id: i32) {
@@ -135,6 +164,12 @@ impl App {
 
     pub fn set_current_route(&mut self, route: RouteId, active_block: ActiveBlock) {
         self.push_navigation_stack(route, active_block);
+    }
+
+    pub fn clear_input(&mut self) {
+        self.input.clear();
+        self.input_cursor_position = 0;
+        self.input_i = 0;
     }
 
     pub fn _update_on_tick(&mut self) {

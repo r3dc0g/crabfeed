@@ -10,6 +10,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 pub enum IOEvent {
     FetchFeeds,
+    AddFeed(String),
 }
 
 pub struct Network<'a> {
@@ -26,6 +27,9 @@ impl<'a> Network<'a> {
         match event {
             IOEvent::FetchFeeds => {
                 self.update_feeds().await?;
+            }
+            IOEvent::AddFeed(url) => {
+                self.add_feed(url).await?;
             }
         }
 
@@ -68,6 +72,18 @@ impl<'a> Network<'a> {
         // Update the app state
         app.set_feed_items(get_feeds()?);
 
+        app.is_loading = false;
+
+        Ok(())
+    }
+
+    async fn add_feed(&self, feed_url: String) -> Result<()> {
+
+        let new_feed = get_feed(feed_url).await?;
+        let connection = &mut db::connect()?;
+        insert_feed(connection, new_feed)?;
+
+        let mut app = self.app.lock().await;
         app.is_loading = false;
 
         Ok(())

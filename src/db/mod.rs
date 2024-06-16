@@ -94,6 +94,19 @@ pub fn select_entry(entry_id: &i32) -> Result<Entry> {
 
 }
 
+pub fn select_content(content_id: &i32) -> Result<Content> {
+
+    let conn = &mut connect()?;
+
+    let result = content::table
+        .filter(content::id.eq(content_id))
+        .select(Content::as_select())
+        .get_result(conn)?;
+
+    Ok(result)
+
+}
+
 pub fn find_feed_link(feed_id: i32) -> Result<Link> {
 
     let conn = &mut connect()?;
