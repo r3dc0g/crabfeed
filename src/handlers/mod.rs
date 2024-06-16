@@ -15,9 +15,11 @@ pub fn handle_app(key: Key, app: &mut App) {
         }
 
         Key::Ctrl('a') => {
-            let current_route = app.get_current_route().clone();
-            app.push_navigation_stack(current_route.id, current_route.active_block);
-            app.set_current_route(RouteId::Home, ActiveBlock::Input);
+            if !app.is_loading {
+                let current_route = app.get_current_route().clone();
+                app.push_navigation_stack(current_route.id, current_route.active_block);
+                app.set_current_route(RouteId::Home, ActiveBlock::Input);
+            }
         }
 
         Key::Ctrl('r') => {

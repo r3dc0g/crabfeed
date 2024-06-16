@@ -83,6 +83,9 @@ impl<'a> Network<'a> {
         let connection = &mut db::connect()?;
         insert_feed(connection, new_feed)?;
 
+        let mut app = self.app.lock().await;
+        app.is_loading = false;
+
         Ok(())
     }
 }

@@ -256,6 +256,13 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn render_add_feed(frame: &mut Frame, app: &App, area: Rect) {
+
+    let mut style = Style::default();
+
+    if app.get_current_route().active_block == ActiveBlock::Input {
+        style = style.fg(Color::Red);
+    }
+
     frame.render_widget(
         Paragraph::new(
             Line::from(
@@ -271,6 +278,7 @@ fn render_add_feed(frame: &mut Frame, app: &App, area: Rect) {
         .block(
             Block::default()
             .borders(Borders::ALL)
+            .border_style(style)
         ),
         area,
     );
