@@ -23,4 +23,10 @@ pub enum Error {
     #[error(transparent)]
     Recv(#[from] std::sync::mpsc::RecvError),
 
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    FeedParsing(#[from] feed_rs::parser::ParseFeedError),
+
 }
