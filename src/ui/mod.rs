@@ -94,17 +94,33 @@ pub fn render_start_page(frame: &mut Frame, app: &App) {
             render_add_feed(frame, app, main_layout[2])
         }
         else {
-            frame.render_widget(
-                Paragraph::new(
-                    Line::from("Ctrl+a to add feed, (Q) to quit")
-                    .alignment(Alignment::Center)
-                )
-                .block(
-                    Block::default()
-                    .borders(Borders::ALL)
-                ),
-                main_layout[2],
-            );
+            if let Some(error) = &app.error_msg {
+                frame.render_widget(
+                    Paragraph::new(
+                        Line::from(error.as_str())
+                        .alignment(Alignment::Center)
+                    )
+                    .block(
+                        Block::default()
+                        .borders(Borders::ALL)
+                    ),
+                    main_layout[2],
+                );
+
+            }
+            else {
+                frame.render_widget(
+                    Paragraph::new(
+                        Line::from("Ctrl+a to add feed, Ctrl+d to delete feed, (ESC/Q) to quit")
+                        .alignment(Alignment::Center)
+                    )
+                    .block(
+                        Block::default()
+                        .borders(Borders::ALL)
+                    ),
+                    main_layout[2],
+                );
+            }
 
         }
 

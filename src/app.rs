@@ -1,7 +1,7 @@
 use ratatui::layout::Rect;
 use std::sync::mpsc::Sender;
 
-use crate::db::{find_entry_links, get_feeds, select_entries, select_entry};
+use crate::db::{delete_feed, find_entry_links, get_feeds, select_entries, select_entry};
 use crate::prelude::{Feed, Entry};
 
 use crate::network::IOEvent;
@@ -58,6 +58,7 @@ pub struct App {
     pub entry_items: Vec<(String, i32)>,
     pub entry: Option<Entry>,
     pub link_items: Vec<(String, i32)>,
+    pub error_msg: Option<String>,
 }
 
 impl Default for App {
@@ -77,6 +78,7 @@ impl Default for App {
             entry_items: vec![],
             entry: None,
             link_items: vec![],
+            error_msg: None,
         }
     }
 
@@ -115,6 +117,7 @@ impl App {
             }).collect();
             self.selected_feed_index = None;
         }
+        self.update_entry_items(0);
         self.is_loading = false;
     }
 
@@ -170,6 +173,20 @@ impl App {
         self.input.clear();
         self.input_cursor_position = 0;
         self.input_i = 0;
+    }
+
+    pub fn delete_feed(&mut self) {
+        if let Some(feed_index) = self.selected_feed_index {
+            let feed_id = self.feed_items[feed_index].1;
+
+            if let Err(e) = delete_feed(feed_id) {
+                self.error_msg = Some(format!("Error deleting feed: {:?}", e));
+                return;
+            };
+
+            self.feed_items.remove(feed_index);
+            self.update_feed_items();
+        }
     }
 
     pub fn _update_on_tick(&mut self) {
