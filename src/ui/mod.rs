@@ -96,7 +96,7 @@ pub fn render_start_page(frame: &mut Frame, app: &App) {
         else {
             frame.render_widget(
                 Paragraph::new(
-                    Line::from("Ctrl+a to add feed, (Q) to quit")
+                    Line::from("Ctrl+a to add feed, Ctrl+d to delete feed, (ESC/Q) to quit")
                     .alignment(Alignment::Center)
                 )
                 .block(
