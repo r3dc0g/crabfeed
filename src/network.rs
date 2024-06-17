@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::control::get_feed;
-use crate::db::{self, find_feed_link, get_feeds, insert_feed};
+use crate::db::{self, find_feed_links, get_feeds, insert_feed};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -54,11 +54,13 @@ impl<'a> Network<'a> {
 
         // Fetch the feed model for each feed
         for feed in get_feeds()?.iter() {
-            let link = find_feed_link(feed.id)?;
+            let links = find_feed_links(feed.id)?;
 
-            if let Ok(feed) = get_feed(link.href).await {
-                new_feeds.push(feed);
-            };
+            for link in links {
+                if let Ok(feed) = get_feed(link.href).await {
+                    new_feeds.push(feed);
+                };
+            }
 
         }
 
@@ -84,6 +86,7 @@ impl<'a> Network<'a> {
         insert_feed(connection, new_feed)?;
 
         let mut app = self.app.lock().await;
+        app.update_feed_items();
         app.is_loading = false;
 
         Ok(())

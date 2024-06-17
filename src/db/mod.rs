@@ -51,6 +51,7 @@ pub fn insert_feed(
     insert_authors(conn, feed.authors, Some(ret_feed.id), None)?;
     insert_links(conn, feed.links, Some(ret_feed.id), None)?;
     insert_entries(conn, feed.entries, ret_feed.id)?;
+    insert_categories(conn, feed.categories, Some(ret_feed.id), None)?;
 
     Ok(())
 }
@@ -107,7 +108,7 @@ pub fn select_content(content_id: &i32) -> Result<Content> {
 
 }
 
-pub fn find_feed_link(feed_id: i32) -> Result<Link> {
+pub fn find_feed_links(feed_id: i32) -> Result<Vec<Link>> {
 
     let conn = &mut connect()?;
 
@@ -115,7 +116,33 @@ pub fn find_feed_link(feed_id: i32) -> Result<Link> {
         .inner_join(feed_link::table.inner_join(link::table))
         .filter(feed::id.eq(feed_id))
         .select(Link::as_select())
-        .get_result(conn)?;
+        .get_results(conn)?;
+
+    Ok(result)
+}
+
+pub fn find_feed_authors(feed_id: i32) -> Result<Vec<Author>> {
+
+    let conn = &mut connect()?;
+
+    let result = feed::table
+        .inner_join(feed_author::table.inner_join(author::table))
+        .filter(feed::id.eq(feed_id))
+        .select(Author::as_select())
+        .get_results(conn)?;
+
+    Ok(result)
+}
+
+pub fn find_feed_categories(feed_id: i32) -> Result<Vec<Category>> {
+
+    let conn = &mut connect()?;
+
+    let result = feed::table
+        .inner_join(feed_category::table.inner_join(category::table))
+        .filter(feed::id.eq(feed_id))
+        .select(Category::as_select())
+        .get_results(conn)?;
 
     Ok(result)
 }
@@ -128,6 +155,32 @@ pub fn find_entry_links(entry_id: i32) -> Result<Vec<Link>> {
         .inner_join(entry_link::table.inner_join(link::table))
         .filter(entry::id.eq(entry_id))
         .select(Link::as_select())
+        .get_results(conn)?;
+
+    Ok(result)
+}
+
+pub fn find_entry_authors(entry_id: i32) -> Result<Vec<Author>> {
+
+    let conn = &mut connect()?;
+
+    let result = entry::table
+        .inner_join(entry_author::table.inner_join(author::table))
+        .filter(entry::id.eq(entry_id))
+        .select(Author::as_select())
+        .get_results(conn)?;
+
+    Ok(result)
+}
+
+pub fn find_entry_categories(entry_id: i32) -> Result<Vec<Category>> {
+
+    let conn = &mut connect()?;
+
+    let result = entry::table
+        .inner_join(entry_category::table.inner_join(category::table))
+        .filter(entry::id.eq(entry_id))
+        .select(Category::as_select())
         .get_results(conn)?;
 
     Ok(result)
@@ -190,7 +243,7 @@ fn insert_entries(
 
         insert_authors(conn, entry.authors, None, Some(ret_entry.id))?;
         insert_links(conn, entry.links, None, Some(ret_entry.id))?;
-
+        insert_categories(conn, entry.categories, None, Some(ret_entry.id))?;
     }
 
     Ok(())
@@ -428,4 +481,140 @@ fn insert_content(
         .get_result(conn)?;
 
     Ok(Some(ret_content.id))
+}
+
+pub fn delete_feed(feed_id: i32) -> Result<()> {
+
+    // Get all the entries for the feed
+    // delete each entriy's link, content and author
+    // delete the entries, author, link, and category of the feed
+    // delete the feed
+
+    let conn = &mut connect()?;
+    let feed = select_feed(&feed_id)?;
+    let entries = get_entries(&feed)?;
+
+    for entry in entries {
+        delete_entry(entry.id)?;
+    }
+
+    if let Ok(links) = find_feed_links(feed_id) {
+        for link in links {
+
+            diesel::delete(feed_link::table
+                .filter(feed_link::feed_id.eq(feed_id))
+            )
+            .execute(conn)?;
+
+            diesel::delete(link::table
+                .filter(link::id.eq(link.id))
+            )
+            .execute(conn)?;
+        }
+    }
+
+    if let Ok(authors) = find_feed_authors(feed_id){
+        for author in authors {
+
+            diesel::delete(feed_author::table
+                .filter(feed_author::feed_id.eq(feed_id))
+            )
+            .execute(conn)?;
+
+            diesel::delete(author::table
+                .filter(author::id.eq(author.id))
+            )
+            .execute(conn)?;
+        }
+    }
+
+    if let Ok(categories) = find_feed_categories(feed_id){
+        for category in categories {
+
+            diesel::delete(feed_category::table
+                .filter(feed_category::feed_id.eq(feed_id))
+            )
+            .execute(conn)?;
+
+            diesel::delete(category::table
+                .filter(category::id.eq(category.id))
+            )
+            .execute(conn)?;
+        }
+    }
+
+    diesel::delete(feed::table
+        .filter(feed::id.eq(feed_id))
+    )
+    .execute(conn)?;
+
+    Ok(())
+}
+
+pub fn delete_entry(entry_id: i32) -> Result<()> {
+
+    // Get the entry
+    // delete the entry's link, content and author
+    // delete the entry
+
+    let conn = &mut connect()?;
+    let entry = select_entry(&entry_id)?;
+
+    if let Ok(links) = find_entry_links(entry.id) {
+        for link in links {
+
+            diesel::delete(entry_link::table
+                .filter(entry_link::entry_id.eq(entry.id))
+            )
+            .execute(conn)?;
+
+            diesel::delete(link::table
+                .filter(link::id.eq(link.id))
+            )
+            .execute(conn)?;
+        }
+    }
+    if let Ok(authors) = find_entry_authors(entry.id){
+        for author in authors {
+
+            diesel::delete(entry_author::table
+                .filter(entry_author::entry_id.eq(entry.id))
+            )
+            .execute(conn)?;
+
+            diesel::delete(author::table
+                .filter(author::id.eq(author.id))
+            )
+            .execute(conn)?;
+        }
+    }
+
+    if let Some(content_id) = entry.content_id {
+        diesel::delete(content::table
+            .filter(content::id.eq(content_id))
+        )
+        .execute(conn)?;
+    };
+
+    if let Ok(categories) = find_entry_categories(entry.id) {
+        for category in categories {
+
+            diesel::delete(entry_category::table
+                .filter(entry_category::entry_id.eq(entry.id))
+            )
+            .execute(conn)?;
+
+            diesel::delete(category::table
+                .filter(category::id.eq(category.id))
+            )
+            .execute(conn)?;
+        }
+    }
+
+    diesel::delete(entry::table
+        .filter(entry::id.eq(entry.id))
+    )
+    .execute(conn)?;
+
+    Ok(())
 }

@@ -21,7 +21,6 @@ pub fn handle_app(key: Key, app: &mut App) {
                 app.set_current_route(RouteId::Home, ActiveBlock::Input);
             }
         }
-
         Key::Ctrl('r') => {
             app.update_feed_items();
         }
