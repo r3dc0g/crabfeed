@@ -15,6 +15,7 @@ CREATE TABLE entry (
   content_id INTEGER,
   summary TEXT,
   source VARCHAR,
+  read BOOLEAN DEFAULT FALSE,
   FOREIGN KEY(feed_id) REFERENCES feed(feed_id),
   FOREIGN KEY(content_id) REFERENCES content(content_id)
 );
