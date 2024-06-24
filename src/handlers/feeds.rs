@@ -12,6 +12,7 @@ pub fn handle(key: Key, app: &mut App) {
             if !feeds.is_empty() {
                 let next_index = common_key_events::on_down_press_handler(&feeds, app.selected_feed_index);
                 app.selected_feed_index = Some(next_index);
+                app.selected_entry_index = None;
                 app.update_entry_items(app.feed_items[app.selected_feed_index.unwrap_or(0)].1);
             }
         }
@@ -22,6 +23,7 @@ pub fn handle(key: Key, app: &mut App) {
             if !feeds.is_empty() {
                 let next_index = common_key_events::on_up_press_handler(&feeds, app.selected_feed_index);
                 app.selected_feed_index = Some(next_index);
+                app.selected_entry_index = None;
                 app.update_entry_items(app.feed_items[app.selected_feed_index.unwrap_or(0)].1);
             }
 

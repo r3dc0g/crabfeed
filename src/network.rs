@@ -72,7 +72,7 @@ impl<'a> Network<'a> {
         }
 
         // Update the app state
-        app.set_feed_items(get_feeds()?);
+        app.update_feed_items();
 
         app.is_loading = false;
 

@@ -1,0 +1,6 @@
+/target
+/design\ docs
+/test.db
+/.env
+/urls
+/backups

@@ -114,6 +114,7 @@ pub struct Entry {
     pub content_id: Option<i32>,
     pub summary: Option<String>,
     pub source: Option<String>,
+    pub read: Option<bool>,
 }
 
 #[derive(Insertable, Debug)]
