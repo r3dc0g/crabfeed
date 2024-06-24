@@ -110,11 +110,18 @@ impl App {
     }
 
     pub fn update_feed_items(&mut self) {
+        let index = self.selected_feed_index.unwrap_or(0);
         self.is_loading = true;
         if let Ok(feeds) = get_feeds() {
             self.feed_items = feeds.iter().map(|f| {
                 (f.title.clone().unwrap_or("No title".to_string()).clone(), f.id)
             }).collect();
+            if index < self.feed_items.len() {
+                self.selected_feed_index = Some(index);
+            }
+            else {
+                self.selected_feed_index = None;
+            }
             self.selected_feed_index = None;
         }
         self.update_entry_items(0);
@@ -123,12 +130,22 @@ impl App {
 
     pub fn update_entry_items(&mut self, feed_id: i32) {
         let entries = select_entries(feed_id).unwrap_or(vec![]);
-
+        let index = self.selected_entry_index;
         self.entry_items = entries.iter().map(|e| {
             (e.title.clone().unwrap_or("No Title".to_string()), (e.id, e.read.unwrap_or(false)))
         })
         .collect();
-        self.selected_entry_index = None;
+        if let Some(index) = index {
+            if index < self.entry_items.len() {
+                self.selected_entry_index = Some(index);
+            }
+            else {
+                self.selected_entry_index = None;
+            }
+        }
+        else {
+            self.selected_entry_index = None;
+        }
     }
 
     pub fn set_entry(&mut self, entry_id: i32) {

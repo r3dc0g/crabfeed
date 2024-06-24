@@ -31,7 +31,7 @@ pub fn handle(key: Key, app: &mut App) {
         }
         k if common_key_events::select_event(k) || common_key_events::right_event(k) => {
             if app.selected_entry_index != None {
-                mark_entry_read(app.entry_items[app.selected_entry_index.unwrap_or(0)].1.0).expect_err("Error marking entry as read");
+                mark_entry_read(app.entry_items[app.selected_entry_index.unwrap_or(0)].1.0).unwrap();
                 app.set_current_route(RouteId::Entry, ActiveBlock::Entry);
                 app.update_link_items(app.entry_items[app.selected_entry_index.unwrap_or(0)].1.0);
             }

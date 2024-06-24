@@ -174,17 +174,32 @@ fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
     entry_list.state.select(app.selected_entry_index);
 
     let mut lines = vec![];
-    let mut read_style = Style::default();
 
     let list_len = titles.len();
+    let mut unread_len = 0;
+    let unread_marker = "*";
 
     for i in 0..list_len {
 
-        if *read.get(i).expect("Error: More titles than entry items") {
+        let mut read_style = Style::default();
+
+        let has_read = read.get(i).expect("Error: More read items than entry items");
+
+        if !*has_read {
             read_style = read_style.bold();
+            unread_len += 1;
+            let curr_title = titles.get(i).expect("Error: Invalid title length");
+            let new_title = format!("{} {}", unread_marker, curr_title);
+            let line = Line::styled(new_title, read_style);
+            lines.push(line);
         }
-        let line = Line::styled(titles.get(i).expect("Error: Invalid title length"), read_style);
-        lines.push(line);
+        else {
+            let curr_title = titles.get(i).expect("Error: Invalid title length");
+            let new_title = format!("- {}", curr_title);
+            let line = Line::styled(new_title, read_style);
+            lines.push(line);
+        }
+
     }
 
     let list = List::new(lines);
@@ -195,10 +210,12 @@ fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
         style = style.fg(Color::Red);
     }
 
+    let title = format!("Entries ({}/{})", unread_len, list_len);
+
     frame.render_stateful_widget(
         list.block(
             Block::default()
-            .title("Entries")
+            .title(title)
             .borders(Borders::ALL)
             .border_style(style)
         )
