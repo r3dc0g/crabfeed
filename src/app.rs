@@ -55,7 +55,7 @@ pub struct App {
     pub io_tx: Option<Sender<IOEvent>>,
     pub is_fetching_current_feed: bool,
     pub feed_items: Vec<(String, i32)>,
-    pub entry_items: Vec<(String, i32)>,
+    pub entry_items: Vec<(String, (i32, bool))>,
     pub entry: Option<Entry>,
     pub link_items: Vec<(String, i32)>,
     pub error_msg: Option<String>,
@@ -125,7 +125,7 @@ impl App {
         let entries = select_entries(feed_id).unwrap_or(vec![]);
 
         self.entry_items = entries.iter().map(|e| {
-            (e.title.clone().unwrap_or("No Title".to_string()), e.id)
+            (e.title.clone().unwrap_or("No Title".to_string()), (e.id, e.read.unwrap_or(false)))
         })
         .collect();
         self.selected_entry_index = None;

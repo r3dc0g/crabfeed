@@ -1,5 +1,4 @@
 use crate::db::select_content;
-use crate::error::Error;
 use crate::app::{ActiveBlock, App, RouteId};
 use ratatui::prelude::*;
 
@@ -11,17 +10,15 @@ use ratatui::{
     Frame,
 };
 
-pub type Result<T> = core::result::Result<T, Error>;
-
 #[derive(Default)]
-struct FeedList {
+struct ItemList {
     items: Vec<String>,
     state: ListState,
 }
 
-impl FeedList {
-    pub fn new() -> FeedList {
-       FeedList::default()
+impl ItemList {
+    pub fn new() -> ItemList {
+       ItemList::default()
     }
 
     pub fn set_items(&mut self, items: Vec<String>) {
@@ -133,7 +130,7 @@ fn render_feeds(frame: &mut Frame, app: &App, area: Rect) {
     // Very fun code that separtes the feed item tuples into two vectors
     let (titles, _): (Vec<String>, Vec<i32>) = app.feed_items.clone().into_iter().map(|(title, id)| (title, id)).unzip();
 
-    let mut feed_list = FeedList::new();
+    let mut feed_list = ItemList::new();
     feed_list.set_items(titles);
     feed_list.state.select(app.selected_feed_index);
 
@@ -163,15 +160,34 @@ fn render_feeds(frame: &mut Frame, app: &App, area: Rect) {
 
 fn render_entries(frame: &mut Frame, app: &App, area: Rect) {
 
-    let (titles, _): (Vec<String>, Vec<i32>) = app.entry_items.clone().into_iter().map(|(title, id)| (title, id)).unzip();
+    let (titles, entries): (Vec<String>, (Vec<i32>, Vec<bool>)) = app.entry_items.clone()
+                                                                                 .into_iter()
+                                                                                 .map(|(title, entry)| (title, entry))
+                                                                                 .unzip();
 
-    let mut entry_list = FeedList::new();
+    let (_, read): (Vec<i32>, Vec<bool>) = entries;
+
+    // This is just a state item and should be integrated into the app struct
+    // This would prevent the need to clone the titles vector
+    let mut entry_list = ItemList::new();
     entry_list.set_items(titles.clone());
     entry_list.state.select(app.selected_entry_index);
 
-    let list = List::new(entry_list.items.clone().into_iter().map(|item| {
-        Line::styled(item, Style::default())
-    }));
+    let mut lines = vec![];
+    let mut read_style = Style::default();
+
+    let list_len = titles.len();
+
+    for i in 0..list_len {
+
+        if *read.get(i).expect("Error: More titles than entry items") {
+            read_style = read_style.bold();
+        }
+        let line = Line::styled(titles.get(i).expect("Error: Invalid title length"), read_style);
+        lines.push(line);
+    }
+
+    let list = List::new(lines);
 
     let mut style = Style::default();
 

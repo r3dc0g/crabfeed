@@ -215,6 +215,19 @@ pub fn select_entries(feed_id: i32) -> Result<Vec<Entry>> {
 
 }
 
+pub fn mark_entry_read(entry_id: i32) -> Result<()> {
+
+    let conn = &mut connect()?;
+
+    diesel::update(entry::table
+        .filter(entry::id.eq(entry_id))
+    )
+    .set(entry::read.eq(true))
+    .execute(conn)?;
+
+    Ok(())
+}
+
 fn insert_entries(
         conn: &mut SqliteConnection,
         entries: Vec<model::Entry>,
