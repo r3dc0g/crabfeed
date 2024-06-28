@@ -1,8 +1,10 @@
+mod tuihtml;
+
 use crate::db::select_content;
 use crate::app::{ActiveBlock, App, RouteId};
 use ratatui::prelude::*;
 
-use ratatui::widgets::Wrap;
+use ratatui::widgets::{Padding, Wrap};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     widgets::{Block, Borders, List, ListState, Paragraph},
@@ -250,6 +252,7 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
             let link_list = List::new(links.clone());
 
             let summary = entry.summary.clone().unwrap_or("No Summary".to_string());
+            let tui_summary = tuihtml::parse_html(&summary);
 
             frame.render_widget(
                 Paragraph::new(entry.title.clone().unwrap_or("No Title".to_string()))
@@ -271,14 +274,26 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
                     );
                 }
                 Err(_) => {
-                    frame.render_widget(
-                        Paragraph::new(summary)
-                            .wrap(Wrap::default())
-                            .block(Block::default()
-                                .borders(Borders::ALL)
-                            ),
-                        entry_layout[1],
-                    );
+                    if let Ok(summary_widget) = tui_summary {
+                        frame.render_widget(
+                            summary_widget
+                                .block(Block::default()
+                                    .borders(Borders::ALL)
+                                    .padding(Padding::uniform(2))
+                                ),
+                            entry_layout[1],
+                        );
+                    }
+                    else {
+                        frame.render_widget(
+                            Paragraph::new(summary)
+                                .wrap(Wrap::default())
+                                .block(Block::default()
+                                    .borders(Borders::ALL)
+                                ),
+                            entry_layout[1],
+                        );
+                    }
                 }
             }
 

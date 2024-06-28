@@ -71,7 +71,8 @@ async fn start_tokio<'a>(io_rx: std::sync::mpsc::Receiver<IOEvent>, network: &mu
 
 async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
     let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    // execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen)?;
     enable_raw_mode()?;
 
     let mut backend = CrosstermBackend::new(stdout);
@@ -79,6 +80,7 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
     backend.execute(SetTitle("crabfeed"))?;
 
     let mut terminal = Terminal::new(backend)?;
+    terminal.clear()?;
     terminal.hide_cursor()?;
 
     let events = event::Events::new(250);
@@ -145,8 +147,10 @@ fn close_app() -> Result<()> {
 #[cfg(test)]
 mod tests {
 
-    use anyhow::Result;
+    use crate::error::Error;
     use std::fs::read_to_string;
+
+    pub type Result<T> = core::result::Result<T, Error>;
 
     #[tokio::test]
     async fn test_feed_insertion() -> Result<()> {
