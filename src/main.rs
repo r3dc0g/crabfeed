@@ -1,4 +1,3 @@
-mod control;
 mod db;
 mod schema;
 mod prelude;
@@ -99,7 +98,8 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
         let mut app = app.lock().await;
 
         if is_first_render {
-            app.dispatch(IOEvent::FetchFeeds);
+            // app.dispatch(IOEvent::UpdateFeeds);
+            app.update_feed_items();
         }
 
         if let Ok(size) = terminal.backend().size() {

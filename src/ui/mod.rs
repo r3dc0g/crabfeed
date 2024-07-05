@@ -235,9 +235,9 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
     let entry_layout = Layout::new(
         Direction::Vertical,
         [
-            Constraint::Percentage(10),
-            Constraint::Percentage(70),
-            Constraint::Percentage(20),
+            Constraint::Length(3),
+            Constraint::Max(80),
+            Constraint::Length(10),
         ],
     )
     .split(area);
@@ -258,20 +258,34 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
                 Paragraph::new(entry.title.clone().unwrap_or("No Title".to_string()))
                     .block(Block::default()
                         .borders(Borders::ALL)
-                    ),
+                    )
+                    .alignment(Alignment::Center),
                 entry_layout[0],
             );
 
             match select_content(&entry.content_id.unwrap_or(-1)) {
                 Ok(content) => {
-                    frame.render_widget(
-                        Paragraph::new(content.body.unwrap_or("No Content".to_string()))
-                            .wrap(Wrap::default())
-                            .block(Block::default()
-                                .borders(Borders::ALL)
-                            ),
-                        entry_layout[1],
-                    );
+                    let content_html = content.body.clone().unwrap_or("".to_string());
+                    if let Ok(tui_content) = tuihtml::parse_html(content_html.as_str()) {
+                        frame.render_widget(
+                            tui_content
+                                .block(Block::default()
+                                    .borders(Borders::ALL)
+                                    .padding(Padding::uniform(2))
+                                ),
+                            entry_layout[1],
+                        );
+                    }
+                    else {
+                        frame.render_widget(
+                            Paragraph::new(content.body.unwrap_or("No Content".to_string()))
+                                .wrap(Wrap::default())
+                                .block(Block::default()
+                                    .borders(Borders::ALL)
+                                ),
+                            entry_layout[1],
+                        );
+                    }
                 }
                 Err(_) => {
                     if let Ok(summary_widget) = tui_summary {
