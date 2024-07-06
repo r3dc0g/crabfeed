@@ -269,6 +269,7 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
                     if let Ok(tui_content) = tuihtml::parse_html(content_html.as_str()) {
                         frame.render_widget(
                             tui_content
+                                .scroll((app.entry_line_index, 0))
                                 .block(Block::default()
                                     .borders(Borders::ALL)
                                     .padding(Padding::uniform(2))
@@ -291,6 +292,7 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
                     if let Ok(summary_widget) = tui_summary {
                         frame.render_widget(
                             summary_widget
+                                .scroll((app.entry_line_index, 0))
                                 .block(Block::default()
                                     .borders(Borders::ALL)
                                     .padding(Padding::uniform(2))
