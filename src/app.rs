@@ -47,6 +47,7 @@ pub struct App {
     navigation_stack: Vec<Route>,
     pub selected_feed_index: Option<usize>,
     pub selected_entry_index: Option<usize>,
+    pub entry_line_index: u16,
     pub size: Rect,
     pub is_loading: bool,
     pub input: Vec<char>,
@@ -68,6 +69,7 @@ impl Default for App {
             navigation_stack: vec![DEFAULT_ROUTE],
             selected_feed_index: None,
             selected_entry_index: None,
+            entry_line_index: 0,
             is_loading: false,
             input: vec![],
             input_cursor_position: 0,
@@ -101,12 +103,6 @@ impl App {
                 eprintln!("Error sending IOEvent: {:?}", e);
             };
         }
-    }
-
-    pub fn set_feed_items(&mut self, feed_items: Vec<Feed>) {
-        self.feed_items = feed_items.iter().map(|f| {
-            (f.title.clone().unwrap_or("No title".to_string()).clone(), f.id)
-        }).collect();
     }
 
     pub fn update_feed_items(&mut self) {

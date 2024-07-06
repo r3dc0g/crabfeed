@@ -3,13 +3,14 @@ use crate::error::Error;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::control::get_feed;
-use crate::db::{self, find_feed_links, get_feeds, insert_feed};
+use feed_rs::parser;
+use reqwest;
+use crate::db::{self, find_feed_links, get_feeds, insert_feed, insert_link};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 pub enum IOEvent {
-    FetchFeeds,
+    UpdateFeeds,
     AddFeed(String),
 }
 
@@ -25,7 +26,7 @@ impl<'a> Network<'a> {
     // Handle IOEvent
     pub async fn handle_io_event(&self, event: IOEvent) -> Result<()> {
         match event {
-            IOEvent::FetchFeeds => {
+            IOEvent::UpdateFeeds => {
                 self.update_feeds().await?;
             }
             IOEvent::AddFeed(url) => {
@@ -38,29 +39,39 @@ impl<'a> Network<'a> {
 
     // Fetch feeds and update the app state
     async fn update_feeds(&self) -> Result<()> {
-        let mut app = self.app.lock().await;
 
         // Grab the feeds from the app state
-        let feed_items = &app.feed_items;
+        let feed_items = get_feeds()?;
 
         if feed_items.is_empty() {
-            // Fetch feeds from the database
-            app.set_feed_items(get_feeds()?);
+            let mut app = self.app.lock().await;
             app.is_loading = false;
-            return Ok(());
+            return Err(Error::Static("No feeds found"));
         }
 
         let mut new_feeds = vec![];
 
         // Fetch the feed model for each feed
-        for feed in get_feeds()?.iter() {
+        for feed in feed_items.iter() {
             let links = find_feed_links(feed.id)?;
 
-            for link in links {
-                if let Ok(feed) = get_feed(link.href).await {
+            if links.is_empty() {
+                return Err(Error::Static("No links found for feed"));
+            }
+
+            for link in links.iter() {
+                let content = reqwest::get(link.href.clone())
+                    .await?
+                    .text()
+                    .await?;
+
+                let new_feed = parser::parse(content.as_bytes());
+
+                if let Ok(feed) = new_feed {
                     new_feeds.push(feed);
                 };
             }
+
 
         }
 
@@ -68,22 +79,32 @@ impl<'a> Network<'a> {
 
         //Update the database
         for feed in new_feeds {
-            insert_feed(connection, feed)?
+            insert_feed(connection, feed)?;
         }
 
+        let mut app = self.app.lock().await;
         // Update the app state
         app.update_feed_items();
 
         app.is_loading = false;
-
         Ok(())
     }
 
     async fn add_feed(&self, feed_url: String) -> Result<()> {
 
-        let new_feed = get_feed(feed_url).await?;
-        let connection = &mut db::connect()?;
-        insert_feed(connection, new_feed)?;
+        let content = reqwest::get(feed_url.as_str())
+            .await?
+            .text()
+            .await?;
+
+        let feed = parser::parse(content.as_bytes());
+
+        if let Ok(feed) = feed {
+            let connection = &mut db::connect()?;
+            let feed_id = insert_feed(connection, feed)?;
+
+            insert_link(connection, feed_url, Some(feed_id), None)?;
+        }
 
         let mut app = self.app.lock().await;
         app.update_feed_items();
@@ -91,5 +112,6 @@ impl<'a> Network<'a> {
 
         Ok(())
     }
+
 }
 

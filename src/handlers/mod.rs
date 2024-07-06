@@ -5,6 +5,7 @@ mod input;
 mod common_key_events;
 
 use crate::app::{ActiveBlock, RouteId};
+use crate::network::IOEvent;
 use crate::{app::App, event::Key};
 use crate::close_app;
 
@@ -23,6 +24,11 @@ pub fn handle_app(key: Key, app: &mut App) {
         }
         Key::Ctrl('r') => {
             app.update_feed_items();
+        }
+
+        Key::Ctrl('u') => {
+            app.is_loading = true;
+            app.dispatch(IOEvent::UpdateFeeds);
         }
 
         _ => handle_block_event(key, app),

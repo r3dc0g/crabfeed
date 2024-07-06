@@ -1,8 +1,10 @@
+mod tuihtml;
+
 use crate::db::select_content;
 use crate::app::{ActiveBlock, App, RouteId};
 use ratatui::prelude::*;
 
-use ratatui::widgets::Wrap;
+use ratatui::widgets::{Padding, Wrap};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     widgets::{Block, Borders, List, ListState, Paragraph},
@@ -233,9 +235,9 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
     let entry_layout = Layout::new(
         Direction::Vertical,
         [
-            Constraint::Percentage(10),
-            Constraint::Percentage(70),
-            Constraint::Percentage(20),
+            Constraint::Length(3),
+            Constraint::Max(80),
+            Constraint::Length(10),
         ],
     )
     .split(area);
@@ -250,35 +252,64 @@ fn render_entry(frame: &mut Frame, app: &App, area: Rect) {
             let link_list = List::new(links.clone());
 
             let summary = entry.summary.clone().unwrap_or("No Summary".to_string());
+            let tui_summary = tuihtml::parse_html(&summary);
 
             frame.render_widget(
                 Paragraph::new(entry.title.clone().unwrap_or("No Title".to_string()))
                     .block(Block::default()
                         .borders(Borders::ALL)
-                    ),
+                    )
+                    .alignment(Alignment::Center),
                 entry_layout[0],
             );
 
             match select_content(&entry.content_id.unwrap_or(-1)) {
                 Ok(content) => {
-                    frame.render_widget(
-                        Paragraph::new(content.body.unwrap_or("No Content".to_string()))
-                            .wrap(Wrap::default())
-                            .block(Block::default()
-                                .borders(Borders::ALL)
-                            ),
-                        entry_layout[1],
-                    );
+                    let content_html = content.body.clone().unwrap_or("".to_string());
+                    if let Ok(tui_content) = tuihtml::parse_html(content_html.as_str()) {
+                        frame.render_widget(
+                            tui_content
+                                .scroll((app.entry_line_index, 0))
+                                .block(Block::default()
+                                    .borders(Borders::ALL)
+                                    .padding(Padding::uniform(2))
+                                ),
+                            entry_layout[1],
+                        );
+                    }
+                    else {
+                        frame.render_widget(
+                            Paragraph::new(content.body.unwrap_or("No Content".to_string()))
+                                .wrap(Wrap::default())
+                                .block(Block::default()
+                                    .borders(Borders::ALL)
+                                ),
+                            entry_layout[1],
+                        );
+                    }
                 }
                 Err(_) => {
-                    frame.render_widget(
-                        Paragraph::new(summary)
-                            .wrap(Wrap::default())
-                            .block(Block::default()
-                                .borders(Borders::ALL)
-                            ),
-                        entry_layout[1],
-                    );
+                    if let Ok(summary_widget) = tui_summary {
+                        frame.render_widget(
+                            summary_widget
+                                .scroll((app.entry_line_index, 0))
+                                .block(Block::default()
+                                    .borders(Borders::ALL)
+                                    .padding(Padding::uniform(2))
+                                ),
+                            entry_layout[1],
+                        );
+                    }
+                    else {
+                        frame.render_widget(
+                            Paragraph::new(summary)
+                                .wrap(Wrap::default())
+                                .block(Block::default()
+                                    .borders(Borders::ALL)
+                                ),
+                            entry_layout[1],
+                        );
+                    }
                 }
             }
 

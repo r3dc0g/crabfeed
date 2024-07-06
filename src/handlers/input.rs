@@ -11,16 +11,13 @@ pub fn handle(key: Key, app: &mut App) {
         }
         Key::Enter => {
             if !app.is_loading {
-                if let Some(io_tx) = app.io_tx.as_ref() {
-                    if !app.input.is_empty() {
-                        let url = app.input.iter().collect::<String>();
-                        app.is_loading = true;
-                        io_tx.send(IOEvent::AddFeed(url)).unwrap();
-                        app.clear_input();
-                        let mut last_route = app.pop_navigation_stack().unwrap_or(Route::default());
-                        last_route = app.pop_navigation_stack().unwrap_or(Route::default());
-                        app.set_current_route(last_route.id, last_route.active_block);
-                    }
+                if !app.input.is_empty() {
+                    let url = app.input.iter().collect::<String>();
+                    app.is_loading = true;
+                    app.dispatch(IOEvent::AddFeed(url));
+                    app.clear_input();
+                    let last_route = app.pop_navigation_stack().unwrap_or(Route::default());
+                    app.set_current_route(last_route.id, last_route.active_block);
                 }
             }
         }
