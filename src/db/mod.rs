@@ -238,7 +238,7 @@ fn insert_entries(
 
     let mut builder = EntryBuilder::new();
 
-    for entry in entries {
+    for entry in entries.iter().rev() {
 
         let possible_entries: Vec<Entry> = entry::table
         .filter(entry::title.eq(entry.title.clone().unwrap().content))
@@ -249,15 +249,15 @@ fn insert_entries(
             continue;
         }
 
-        let content_id = insert_content(conn, entry.content)?;
+        let content_id = insert_content(conn, entry.content.clone())?;
 
         let new_entry = builder
             .feed_id(feed_id)
-            .title(entry.title)
-            .updated(entry.updated)
+            .title(entry.title.clone())
+            .updated(entry.updated.clone())
             .content_id(content_id)
-            .summary(entry.summary)
-            .source(entry.source)
+            .summary(entry.summary.clone())
+            .source(entry.source.clone())
             .build()?;
 
         let ret_entry: Entry = diesel::insert_into(entry::table)
@@ -265,9 +265,9 @@ fn insert_entries(
             .returning(Entry::as_returning())
             .get_result(conn)?;
 
-        insert_authors(conn, entry.authors, None, Some(ret_entry.id))?;
-        insert_links(conn, entry.links, None, Some(ret_entry.id))?;
-        insert_categories(conn, entry.categories, None, Some(ret_entry.id))?;
+        insert_authors(conn, entry.authors.clone(), None, Some(ret_entry.id))?;
+        insert_links(conn, entry.links.clone(), None, Some(ret_entry.id))?;
+        insert_categories(conn, entry.categories.clone(), None, Some(ret_entry.id))?;
     }
 
     Ok(())

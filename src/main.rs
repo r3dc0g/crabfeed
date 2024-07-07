@@ -98,7 +98,6 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
         let mut app = app.lock().await;
 
         if is_first_render {
-            // app.dispatch(IOEvent::UpdateFeeds);
             app.update_feed_items();
         }
 
@@ -124,9 +123,7 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
 
                 handlers::handle_app(key, &mut app);
             }
-            event::Event::Tick => {
-                app._update_on_tick();
-            }
+            _ => {}
         }
 
         is_first_render = false;

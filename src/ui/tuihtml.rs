@@ -100,19 +100,25 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                     }
                     return spans;
                 }
-                else {
+                else if element.children.len() == 1 {
                     if element.children[0].element().is_some() {
                         let mut spans = vec![];
                         for span in handle_style(element.children[0].clone()) {
                             spans.push(span.add_modifier(Modifier::UNDERLINED));
                         }
+
+                        return spans;
                     }
+
                     return vec![
                         Span::styled(
                             element.children[0].text().unwrap().to_string(),
                             Style::default().add_modifier(Modifier::UNDERLINED)
                         )
                     ];
+                }
+                else {
+                    return vec![];
                 }
             }
 
@@ -172,6 +178,7 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
                         if let Some(element) = child.element() {
                             if element.name == "li" {
                                 let mut spans = Vec::new();
+                                spans.push(Span::raw("• ").add_modifier(Modifier::BOLD));
                                 for child in element.children.iter() {
                                     for span in handle_style(child.clone()) {
                                         spans.push(span);
