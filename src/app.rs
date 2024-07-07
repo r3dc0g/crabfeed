@@ -127,7 +127,7 @@ impl App {
     pub fn update_entry_items(&mut self, feed_id: i32) {
         let entries = select_entries(feed_id).unwrap_or(vec![]);
         let index = self.selected_entry_index;
-        self.entry_items = entries.iter().map(|e| {
+        self.entry_items = entries.iter().rev().map(|e| {
             (e.title.clone().unwrap_or("No Title".to_string()), (e.id, e.read.unwrap_or(false)))
         })
         .collect();
