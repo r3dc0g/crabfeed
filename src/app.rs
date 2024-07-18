@@ -2,7 +2,8 @@ use ratatui::layout::Rect;
 use std::sync::mpsc::Sender;
 
 use crate::db::{delete_feed, find_entry_links, get_feeds, select_entries, select_entry};
-use crate::prelude::{Feed, Entry};
+use crate::prelude::Entry;
+use crate::error::Error;
 
 use crate::network::IOEvent;
 

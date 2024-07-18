@@ -16,7 +16,6 @@ use std::{
 use error::Error;
 
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
     execute, terminal::{
         disable_raw_mode,
         enable_raw_mode,
@@ -137,7 +136,7 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
 fn close_app() -> Result<()> {
     disable_raw_mode()?;
     let mut stdout = stdout();
-    execute!(stdout, LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(stdout, LeaveAlternateScreen)?;
     Ok(())
 }
 
