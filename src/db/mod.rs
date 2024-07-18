@@ -3,20 +3,27 @@ use diesel::prelude::*;
 use crate::prelude::*;
 use crate::schema::*;
 use crate::error::Error;
-use dotenvy::dotenv;
 use feed_rs::model;
 use std::env;
+use std::fs::create_dir_all;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 pub fn connect() -> Result<SqliteConnection> {
-    dotenv().ok();
 
-    let database_url =  env::var("DATABASE_URL")?;
+    if cfg!(unix) {
+        let home = env::var("HOME").unwrap();
+        let database_folder = format!("{}/.local/share/crabfeed/", home);
+        let database_url = format!("{}/crabfeed.db", database_folder);
+        create_dir_all(database_folder)?;
 
-    let connection = SqliteConnection::establish(&database_url)?;
+        let connection = SqliteConnection::establish(&database_url)?;
 
-    Ok(connection)
+        return Ok(connection);
+    }
+
+    Err(Error::Static("Unsupported OS"))
+
 }
 
 pub fn insert_feed(
