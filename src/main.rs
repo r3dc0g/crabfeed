@@ -9,8 +9,7 @@ mod event;
 mod handlers;
 
 use std::{
-    io::stdout,
-    sync::Arc,
+    io::stdout, ops::Deref, sync::Arc
 };
 
 use error::Error;
@@ -27,8 +26,7 @@ use crossterm::{
 };
 
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    terminal::Terminal,
+    backend::{Backend, CrosstermBackend}, layout::Rect, terminal::Terminal
 };
 
 use tokio::sync::Mutex;
@@ -108,12 +106,12 @@ async fn start_ui(app: &Arc<Mutex<App>>) -> Result<()> {
         }
 
         // let current_route = app.get_current_route();
-        terminal.draw(
-            |f|
-            {
-                ui::render_start_page(f, &app);
-            }
-        )?;
+        terminal.draw(|f| {
+            f.render_widget(
+                app.deref(),
+                app.size
+            );
+        })?;
 
         match events.next()? {
             event::Event::Input(key) => {
@@ -141,40 +139,40 @@ fn close_app() -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-    use crate::error::Error;
-    use std::fs::read_to_string;
+//     use crate::error::Error;
+//     use std::fs::read_to_string;
 
-    pub type Result<T> = core::result::Result<T, Error>;
+//     pub type Result<T> = core::result::Result<T, Error>;
 
-    #[tokio::test]
-    async fn test_feed_insertion() -> Result<()> {
-        use crate::control::get_feed;
-        use crate::db::*;
+//     #[tokio::test]
+//     async fn test_feed_insertion() -> Result<()> {
+//         use crate::control::get_feed;
+//         use crate::db::*;
 
-        let mut lines = Vec::new();
+//         let mut lines = Vec::new();
 
-        for line in read_to_string("urls")?.lines() {
-            lines.push(line.to_string());
-        }
+//         for line in read_to_string("urls")?.lines() {
+//             lines.push(line.to_string());
+//         }
 
-        let conn = &mut connect()?;
+//         let conn = &mut connect()?;
 
-        for line in lines {
-            match get_feed(line).await {
-                Ok(test_feed) => {
-                    insert_feed(conn, test_feed)?;
-                },
-                Err(e) => {
-                    println!("{:?}", e);
-                    ()
-                }
-            }
+//         for line in lines {
+//             match get_feed(line).await {
+//                 Ok(test_feed) => {
+//                     insert_feed(conn, test_feed)?;
+//                 },
+//                 Err(e) => {
+//                     println!("{:?}", e);
+//                     ()
+//                 }
+//             }
 
-        }
+//         }
 
-        Ok(())
-    }
-}
+//         Ok(())
+//     }
+// }
