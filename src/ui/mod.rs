@@ -10,7 +10,7 @@ use ratatui::{
     style::{Style, Color}
 };
 
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct BlockLabel {
     block_label: String,
 }
@@ -38,13 +38,21 @@ impl BlockLabel {
     }
 }
 
-struct ItemList {
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ItemList<'a, T>
+where
+    T: IntoIterator + Clone,
+    T::Item: Into<ListItem<'a>>, {
+
     title: Option<String>,
-    items: Vec<String>,
+    items: &'a T,
     style: Style,
 }
 
-impl StatefulWidgetRef for ItemList {
+impl<'a, T> StatefulWidgetRef for ItemList<'a, T>
+where
+    T: IntoIterator + Clone,
+    T::Item: Into<ListItem<'a>>, {
     type State = ListState;
 
     fn render_ref(&self,area:Rect,buf: &mut Buffer,state: &mut Self::State) {
@@ -55,7 +63,10 @@ impl StatefulWidgetRef for ItemList {
     }
 }
 
-impl StatefulWidget for ItemList {
+impl<'a, T> StatefulWidget for ItemList<'a, T>
+where
+    T: IntoIterator + Clone,
+    T::Item: Into<ListItem<'a>>, {
     type State = ListState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
@@ -63,21 +74,14 @@ impl StatefulWidget for ItemList {
     }
 }
 
-impl Default for ItemList {
-    fn default() -> Self {
-        Self {
-            title: None,
-            items: vec![],
-            style: Style::default(),
-        }
-    }
-}
-
-impl ItemList {
-    fn new(items: Vec<String>, title: Option<String>, style: Style) -> Self {
+impl<'a, T> ItemList<'a, T>
+where
+    T: IntoIterator + Clone,
+    T::Item: Into<ListItem<'a>>, {
+    fn new(items: &'a T, title: Option<String>, style: Style) -> Self {
         Self {
             title,
-            items,
+            items: &items,
             style,
         }
     }
@@ -107,10 +111,38 @@ impl Widget for &App {
 
                 let (feed_titles, _): (Vec<String>, Vec<i32>) = self.feed_items.clone().into_iter().map(|(title, id)| (title, id)).unzip();
 
-                let (entry_titles, _): (Vec<String>, (Vec<i32>, Vec<bool>)) = self.entry_items.clone().into_iter().map(|(title, entry)| (title, entry)).unzip();
+                let (entry_titles, entries): (Vec<String>, (Vec<i32>, Vec<bool>)) = self.entry_items.clone().into_iter().map(|(title, entry)| (title, entry)).unzip();
+                let (_, read): (Vec<i32>, Vec<bool>) = entries;
+                let list_len  = entry_titles.len();
+                let mut unread_len = 0;
+                let unread_marker = "*";
+                let mut lines = vec![];
+
+                for i in 0..list_len {
+
+                    let mut read_style = Style::default();
+
+                    let has_read = read.get(i).expect("Error: More read items than entry items");
+
+                    if !*has_read {
+                        read_style = read_style.bold();
+                        unread_len += 1;
+                        let curr_title = entry_titles.get(i).expect("Error: Invalid title length");
+                        let new_title = format!("{} {}", unread_marker, curr_title);
+                        let line = Line::styled(new_title, read_style);
+                        lines.push(line);
+                    }
+                    else {
+                        let curr_title = entry_titles.get(i).expect("Error: Invalid title length");
+                        let new_title = format!("- {}", curr_title);
+                        let line = Line::styled(new_title, read_style);
+                        lines.push(line);
+                    }
+
+                }
 
                 let feed_list = ItemList::new(
-                    feed_titles,
+                    &feed_titles,
                     Some("Feeds".to_string()),
                     match self.get_current_route().active_block {
                         ActiveBlock::Feeds => selected_style,
@@ -119,8 +151,8 @@ impl Widget for &App {
                 );
 
                 let entry_list = ItemList::new(
-                    entry_titles,
-                    Some("Entries".to_string()),
+                    &lines,
+                    Some(format!("Entries ({}/{})", unread_len, self.total_entries)),
                     match self.get_current_route().active_block {
                         ActiveBlock::Entries => selected_style,
                         _ => unselected_style

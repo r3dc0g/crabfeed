@@ -60,6 +60,7 @@ pub struct App {
     pub entry: Option<Entry>,
     pub link_items: Vec<(String, i32)>,
     pub error_msg: Option<String>,
+    pub total_entries: usize,
 }
 
 impl Default for App {
@@ -81,6 +82,7 @@ impl Default for App {
             entry: None,
             link_items: vec![],
             error_msg: None,
+            total_entries: 0,
         }
     }
 
@@ -142,6 +144,8 @@ impl App {
         else {
             self.selected_entry_index = None;
         }
+
+        self.total_entries = self.entry_items.len();
     }
 
     pub fn set_entry(&mut self, entry_id: i32) {
