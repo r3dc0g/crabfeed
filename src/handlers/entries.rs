@@ -10,9 +10,20 @@ pub fn handle(key: Key, app: &mut App) {
             let entries = &mut app.entry_items;
 
             if !entries.is_empty() {
-                let next_index = common_key_events::on_down_press_handler(&entries, app.selected_entry_index);
-                app.selected_entry_index = Some(next_index);
-                app.set_entry(app.entry_items[app.selected_entry_index.unwrap_or(0)].1.0);
+                if let Some(index) = app.entry_list_state.selected() {
+                    if index < app.entry_items.len() - 1 {
+                        app.entry_list_state.select_next();
+                    }
+                    else {
+                        app.entry_list_state.select_first();
+                    }
+                }
+                else {
+                    app.entry_list_state.select_first();
+                }
+
+                app.set_entry(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);
+                app.set_content(match &app.entry { Some(entry) => entry.content_id.clone(), None => None });
             }
 
         }
@@ -20,9 +31,21 @@ pub fn handle(key: Key, app: &mut App) {
             let entries = &mut app.entry_items;
 
             if !entries.is_empty() {
-                let next_index = common_key_events::on_up_press_handler(&entries, app.selected_entry_index);
-                app.selected_entry_index = Some(next_index);
-                app.set_entry(app.entry_items[app.selected_entry_index.unwrap_or(0)].1.0);
+
+                if let Some(index) = app.entry_list_state.selected() {
+                    if index > 0 {
+                        app.entry_list_state.select_previous();
+                    }
+                    else {
+                        app.entry_list_state.select(Some(app.entry_items.len() - 1));
+                    }
+                }
+                else {
+                    app.entry_list_state.select(Some(app.entry_items.len() - 1));
+                }
+
+                app.set_entry(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);
+                app.set_content(match &app.entry { Some(entry) => entry.content_id.clone(), None => None });
             }
 
         }
@@ -30,11 +53,9 @@ pub fn handle(key: Key, app: &mut App) {
             app.set_current_route(RouteId::Home, ActiveBlock::Feeds);
         }
         k if common_key_events::select_event(k) || common_key_events::right_event(k) => {
-            if app.selected_entry_index != None {
-                mark_entry_read(app.entry_items[app.selected_entry_index.unwrap_or(0)].1.0).unwrap();
-                app.set_current_route(RouteId::Entry, ActiveBlock::Entry);
-                app.update_link_items(app.entry_items[app.selected_entry_index.unwrap_or(0)].1.0);
-            }
+            mark_entry_read(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0).unwrap();
+            app.set_current_route(RouteId::Entry, ActiveBlock::Entry);
+            app.update_link_items(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);
         }
         _ => {}
     }

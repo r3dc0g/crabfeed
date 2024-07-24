@@ -1,10 +1,13 @@
-use ratatui::layout::Rect;
-use std::sync::mpsc::Sender;
-
-use crate::db::{delete_feed, find_entry_links, get_feeds, select_entries, select_entry};
-use crate::prelude::{Feed, Entry};
+use crate::db::*;
+use crate::prelude::{Content, Entry};
 
 use crate::network::IOEvent;
+
+use ratatui::{
+    layout::Rect,
+    widgets::ListState,
+};
+use std::sync::mpsc::Sender;
 
 const DEFAULT_ROUTE: Route = Route {
     id: RouteId::Home,
@@ -45,8 +48,8 @@ pub struct Route {
 
 pub struct App {
     navigation_stack: Vec<Route>,
-    pub selected_feed_index: Option<usize>,
-    pub selected_entry_index: Option<usize>,
+    pub feed_list_state: ListState,
+    pub entry_list_state: ListState,
     pub entry_line_index: u16,
     pub size: Rect,
     pub is_loading: bool,
@@ -58,6 +61,7 @@ pub struct App {
     pub feed_items: Vec<(String, i32)>,
     pub entry_items: Vec<(String, (i32, bool))>,
     pub entry: Option<Entry>,
+    pub content: Option<Content>,
     pub link_items: Vec<(String, i32)>,
     pub error_msg: Option<String>,
     pub total_entries: usize,
@@ -68,8 +72,8 @@ impl Default for App {
         App {
             size: Rect::default(),
             navigation_stack: vec![DEFAULT_ROUTE],
-            selected_feed_index: None,
-            selected_entry_index: None,
+            feed_list_state: ListState::default(),
+            entry_list_state: ListState::default(),
             entry_line_index: 0,
             is_loading: false,
             input: vec![],
@@ -80,6 +84,7 @@ impl Default for App {
             feed_items: vec![],
             entry_items: vec![],
             entry: None,
+            content: None,
             link_items: vec![],
             error_msg: None,
             total_entries: 0,
@@ -108,19 +113,19 @@ impl App {
     }
 
     pub fn update_feed_items(&mut self) {
-        let index = self.selected_feed_index.unwrap_or(0);
+        let index = self.feed_list_state.selected().unwrap_or(0);
         self.is_loading = true;
         if let Ok(feeds) = get_feeds() {
             self.feed_items = feeds.iter().map(|f| {
                 (f.title.clone().unwrap_or("No title".to_string()).clone(), f.id)
             }).collect();
             if index < self.feed_items.len() {
-                self.selected_feed_index = Some(index);
+                self.feed_list_state.select(Some(index));
             }
             else {
-                self.selected_feed_index = None;
+                self.feed_list_state.select(None);
             }
-            self.selected_feed_index = None;
+            self.feed_list_state.select(None);
         }
         self.update_entry_items(0);
         self.is_loading = false;
@@ -128,21 +133,21 @@ impl App {
 
     pub fn update_entry_items(&mut self, feed_id: i32) {
         let entries = select_entries(feed_id).unwrap_or(vec![]);
-        let index = self.selected_entry_index;
+        let index = self.entry_list_state.selected();
         self.entry_items = entries.iter().rev().map(|e| {
             (e.title.clone().unwrap_or("No Title".to_string()), (e.id, e.read.unwrap_or(false)))
         })
         .collect();
         if let Some(index) = index {
             if index < self.entry_items.len() {
-                self.selected_entry_index = Some(index);
+                self.entry_list_state.select(Some(index));
             }
             else {
-                self.selected_entry_index = None;
+                self.entry_list_state.select(None);
             }
         }
         else {
-            self.selected_entry_index = None;
+            self.entry_list_state.select(None);
         }
 
         self.total_entries = self.entry_items.len();
@@ -155,6 +160,23 @@ impl App {
         }
 
         self.entry = None;
+    }
+
+    pub fn set_content(&mut self, content: Option<i32>) {
+
+        match content {
+            Some(content_id) => {
+                if let Ok(content) = select_content(&content_id) {
+                    self.content = Some(content);
+                    return;
+                }
+            }
+
+            None => {
+                self.content = None;
+            }
+        }
+
     }
 
     pub fn update_link_items(&mut self, entry_id: i32) {
@@ -193,7 +215,7 @@ impl App {
     }
 
     pub fn delete_feed(&mut self) {
-        if let Some(feed_index) = self.selected_feed_index {
+        if let Some(feed_index) = self.feed_list_state.selected() {
             let feed_id = self.feed_items[feed_index].1;
 
             if let Err(e) = delete_feed(feed_id) {

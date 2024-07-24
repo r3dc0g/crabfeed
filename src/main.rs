@@ -15,7 +15,7 @@ use std::{
 use error::Error;
 
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
+    event::DisableMouseCapture,
     execute, terminal::{
         disable_raw_mode,
         enable_raw_mode,
@@ -26,7 +26,8 @@ use crossterm::{
 };
 
 use ratatui::{
-    backend::{Backend, CrosstermBackend}, layout::Rect, terminal::Terminal
+    backend::{Backend, CrosstermBackend},
+    terminal::Terminal
 };
 
 use tokio::sync::Mutex;

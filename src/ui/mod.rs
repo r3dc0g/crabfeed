@@ -1,91 +1,16 @@
 mod tuihtml;
+mod components;
 
 use crate::app::{ActiveBlock, App, RouteId};
+use components::*;
 
 use ratatui::prelude::*;
 use ratatui::widgets::*;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    widgets::{Block, Borders, List, ListState, Paragraph},
+    widgets::{ListState, Paragraph},
     style::{Style, Color}
 };
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct BlockLabel {
-    block_label: String,
-}
-
-impl WidgetRef for BlockLabel {
-    fn render_ref(&self,area:Rect,buf: &mut Buffer) {
-        Paragraph::new(self.block_label.clone())
-            .alignment(Alignment::Center)
-            .block(Block::default().borders(Borders::ALL))
-            .render(area, buf);
-    }
-}
-
-impl Widget for BlockLabel {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        self.render_ref(area, buf);
-    }
-}
-
-impl BlockLabel {
-    fn new(block_label: String) -> Self {
-        Self {
-            block_label,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ItemList<'a, T>
-where
-    T: IntoIterator + Clone,
-    T::Item: Into<ListItem<'a>>, {
-
-    title: Option<String>,
-    items: &'a T,
-    style: Style,
-}
-
-impl<'a, T> StatefulWidgetRef for ItemList<'a, T>
-where
-    T: IntoIterator + Clone,
-    T::Item: Into<ListItem<'a>>, {
-    type State = ListState;
-
-    fn render_ref(&self,area:Rect,buf: &mut Buffer,state: &mut Self::State) {
-        StatefulWidget::render(List::new(self.items.clone())
-            .block(Block::default().borders(Borders::ALL).title(self.title.clone().unwrap_or("".to_string())).border_style(self.style))
-            .highlight_style(Style::default().bg(Color::Red)),
-            area, buf, state);
-    }
-}
-
-impl<'a, T> StatefulWidget for ItemList<'a, T>
-where
-    T: IntoIterator + Clone,
-    T::Item: Into<ListItem<'a>>, {
-    type State = ListState;
-
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        self.render_ref(area, buf, state);
-    }
-}
-
-impl<'a, T> ItemList<'a, T>
-where
-    T: IntoIterator + Clone,
-    T::Item: Into<ListItem<'a>>, {
-    fn new(items: &'a T, title: Option<String>, style: Style) -> Self {
-        Self {
-            title,
-            items: &items,
-            style,
-        }
-    }
-}
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -103,8 +28,9 @@ impl Widget for &App {
         )
         .split(area);
 
-        let title = BlockLabel::new("Crabfeed".to_string());
-        title.render(app_layout[0], buf);
+        BlockLabel::new()
+            .label("Crabfeed".to_string())
+            .render(app_layout[0], buf);
 
         match self.get_current_route().id {
             RouteId::Home => {
@@ -141,28 +67,7 @@ impl Widget for &App {
 
                 }
 
-                let feed_list = ItemList::new(
-                    &feed_titles,
-                    Some("Feeds".to_string()),
-                    match self.get_current_route().active_block {
-                        ActiveBlock::Feeds => selected_style,
-                        _ => unselected_style
-                    }
-                );
 
-                let entry_list = ItemList::new(
-                    &lines,
-                    Some(format!("Entries ({}/{})", unread_len, self.total_entries)),
-                    match self.get_current_route().active_block {
-                        ActiveBlock::Entries => selected_style,
-                        _ => unselected_style
-                    }
-                );
-
-                let mut feed_state = ListState::default();
-                feed_state.select(self.selected_feed_index);
-                let mut entry_state = ListState::default();
-                entry_state.select(self.selected_entry_index);
 
                 let lists_section = Layout::new(
                     Direction::Horizontal,
@@ -173,18 +78,122 @@ impl Widget for &App {
                 )
                 .split(app_layout[1]);
 
-                feed_list.render(lists_section[0], buf, &mut feed_state);
-                entry_list.render(lists_section[1], buf, &mut entry_state);
+                ItemList::new(&feed_titles)
+                    .title(Some("Feeds".to_string()))
+                    .style(
+                        match self.get_current_route().active_block {
+                            ActiveBlock::Feeds => selected_style,
+                            _ => unselected_style
+                        }
+                    )
+                    .render(lists_section[0], buf, &mut self.feed_list_state.clone());
+
+                ItemList::new(&lines)
+                    .title(Some(format!("Entries ({}/{})", unread_len, self.total_entries)))
+                    .style(
+                        match self.get_current_route().active_block {
+                            ActiveBlock::Entries => selected_style,
+                            _ => unselected_style
+                        }
+                    )
+                    .render(lists_section[1], buf, &mut self.entry_list_state.clone());
+
 
             }
 
             RouteId::Entry => {
 
+                let possible_entry = self.entry.clone();
+
+                match possible_entry {
+
+                    Some(entry) => {
+
+                        let summary = entry.summary.clone().unwrap_or("No Summary".to_string());
+                        let tui_summary = tuihtml::parse_html(&summary);
+
+                        let entry_layout = Layout::new(
+                            Direction::Vertical,
+                            [
+                                Constraint::Length(3),
+                                Constraint::Max(80),
+                                Constraint::Length(10),
+                            ]
+                        )
+                        .split(app_layout[1]);
+
+                        BlockLabel::new()
+                            .label(
+                                entry.title.clone()
+                                    .unwrap_or("No Title".to_string())
+                            )
+                            .render(entry_layout[0], buf);
+
+                        match &self.content {
+                            Some(content) => {
+                                let content_html = content.body.clone().unwrap_or("".to_string());
+                                if let Ok(tui_content) = tuihtml::parse_html(content_html.as_str()) {
+                                    BlockText::default()
+                                        .title(None)
+                                        .paragraph(
+                                            tui_content.scroll((self.entry_line_index, 0))
+                                        )
+                                        .render(entry_layout[1], buf);
+                                }
+                                else {
+                                    BlockText::default()
+                                        .title(None)
+                                        .paragraph(
+                                            Paragraph::new("No Content".to_string())
+                                        )
+                                        .render(entry_layout[1], buf);
+                                }
+                            }
+                            None => {
+                                if let Ok(summary_paragraph) = tui_summary {
+                                    BlockText::default()
+                                        .title(None)
+                                        .paragraph(
+                                            summary_paragraph.scroll((self.entry_line_index, 0))
+                                        )
+                                        .render(entry_layout[1], buf);
+                                }
+                                else {
+                                    BlockText::default()
+                                        .title(None)
+                                        .paragraph(
+                                            Paragraph::new("No Summary".to_string())
+                                                .wrap(Wrap::default())
+                                        )
+                                        .render(entry_layout[1], buf);
+                                }
+                            }
+                        }
+
+                        let (links, _): (Vec<String>, Vec<i32>) = self.link_items.clone().into_iter().map(|(link, id)| (link, id)).unzip();
+
+                        ItemList::new(&links)
+                            .title(Some("Links".to_string()))
+                            .style(unselected_style)
+                            .render(entry_layout[2], buf, &mut ListState::default());
+
+                    }
+
+                    None => {
+                        BlockText::default()
+                            .title(None)
+                            .paragraph(
+                                Paragraph::new("Error: No Entry Found".to_string())
+                            )
+                            .render(app_layout[1], buf);
+                    }
+                }
             }
         }
 
-        let footer = BlockLabel::new("Ctrl+a to add feed, Ctrl+d to delete feed, (ESC/Q) to quit".to_string());
-        footer.render(app_layout[2], buf);
+        BlockLabel::new()
+            .label("Ctrl+a to add feed, Ctrl+d to delete feed, (ESC/Q) to quit".to_string())
+            .render(app_layout[2], buf);
 
     }
 }
