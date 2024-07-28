@@ -1,4 +1,3 @@
-mod tuihtml;
 mod components;
 
 use crate::app::{ActiveBlock, App, RouteId};
@@ -133,9 +132,6 @@ impl Widget for &App {
 
                     Some(entry) => {
 
-                        let summary = entry.summary.clone().unwrap_or("No Summary".to_string());
-                        let tui_summary = tuihtml::parse_html(&summary);
-
                         let entry_layout = Layout::new(
                             Direction::Vertical,
                             [
@@ -153,45 +149,35 @@ impl Widget for &App {
                             )
                             .render(entry_layout[0], buf);
 
-                        match &self.content {
+                        match &self.entry_content {
                             Some(content) => {
-                                let content_html = content.body.clone().unwrap_or("".to_string());
 
-                                // Hey bud this shouldn't be happening here
-                                if let Ok(tui_content) = tuihtml::parse_html(content_html.as_str()) {
-                                    BlockText::default()
-                                        .title(None)
-                                        .paragraph(
-                                            tui_content.scroll((self.entry_line_index, 0))
-                                        )
-                                        .render(entry_layout[1], buf);
-                                }
-                                else {
-                                    BlockText::default()
-                                        .title(None)
-                                        .paragraph(
-                                            Paragraph::new("No Content".to_string())
-                                        )
-                                        .render(entry_layout[1], buf);
-                                }
+                                BlockText::default()
+                                    .title(None)
+                                    .paragraph(
+                                        content.clone().scroll((self.entry_line_index, 0))
+                                    )
+                                    .render(entry_layout[1], buf);
                             }
                             None => {
-                                if let Ok(summary_paragraph) = tui_summary {
-                                    BlockText::default()
-                                        .title(None)
-                                        .paragraph(
-                                            summary_paragraph.scroll((self.entry_line_index, 0))
-                                        )
-                                        .render(entry_layout[1], buf);
-                                }
-                                else {
-                                    BlockText::default()
-                                        .title(None)
-                                        .paragraph(
-                                            Paragraph::new("No Summary".to_string())
-                                                .wrap(Wrap::default())
-                                        )
-                                        .render(entry_layout[1], buf);
+                                match &self.entry_summary {
+                                    Some(summary) => {
+                                        BlockText::default()
+                                            .title(None)
+                                            .paragraph(
+                                                summary.clone().scroll((self.entry_line_index, 0))
+                                            )
+                                            .render(entry_layout[1], buf);
+                                    }
+                                    None => {
+                                        BlockText::default()
+                                            .title(None)
+                                            .paragraph(
+                                                Paragraph::new("No Summary".to_string())
+                                                    .wrap(Wrap::default())
+                                            )
+                                            .render(entry_layout[1], buf);
+                                    }
                                 }
                             }
                         }

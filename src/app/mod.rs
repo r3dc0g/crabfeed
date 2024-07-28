@@ -1,8 +1,11 @@
+mod tuihtml;
+
 use crate::db::*;
-use crate::prelude::{Content, Entry};
+use crate::prelude::Entry;
 
 use crate::network::IOEvent;
 
+use ratatui::widgets::Paragraph;
 use ratatui::{
     layout::Rect,
     widgets::ListState,
@@ -61,10 +64,11 @@ pub struct App {
     pub feed_items: Vec<(String, i32)>,
     pub entry_items: Vec<(String, (i32, bool))>,
     pub entry: Option<Entry>,
-    pub content: Option<Content>,
     pub link_items: Vec<(String, i32)>,
     pub error_msg: Option<String>,
     pub total_entries: usize,
+    pub entry_content: Option<Paragraph<'static>>,
+    pub entry_summary: Option<Paragraph<'static>>,
 }
 
 impl Default for App {
@@ -84,10 +88,11 @@ impl Default for App {
             feed_items: vec![],
             entry_items: vec![],
             entry: None,
-            content: None,
             link_items: vec![],
             error_msg: None,
             total_entries: 0,
+            entry_content: None,
+            entry_summary: None,
         }
     }
 
@@ -98,7 +103,7 @@ impl App {
     pub fn new(io_tx: Sender<IOEvent>) -> Self {
         Self {
             io_tx: Some(io_tx),
-            ..Default::default()
+            ..Self::default()
         }
     }
 
@@ -167,14 +172,41 @@ impl App {
         match content {
             Some(content_id) => {
                 if let Ok(content) = select_content(&content_id) {
-                    self.content = Some(content);
-                    return;
+                    let content_html = content.body.clone().unwrap_or("".to_string());
+
+                    if let Ok(tui_content) = tuihtml::parse_html(content_html) {
+                        self.entry_content = Some(tui_content);
+                    }
+                    else {
+                        self.entry_content = None;
+                    }
                 }
             }
 
             None => {
-                self.content = None;
+                self.entry_content = None;
             }
+        }
+
+    }
+
+    pub fn set_summary(&mut self) {
+
+        if let Some(entry) = &self.entry {
+            if let Some(summary_html) = &entry.summary {
+                if let Ok(tui_summary) = tuihtml::parse_html(summary_html.to_string()) {
+                    self.entry_summary = Some(tui_summary);
+                }
+                else {
+                    self.entry_summary = None;
+                }
+            }
+            else {
+                self.entry_summary = None;
+            }
+        }
+        else {
+            self.entry_summary = None;
         }
 
     }

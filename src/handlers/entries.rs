@@ -22,8 +22,6 @@ pub fn handle(key: Key, app: &mut App) {
                     app.entry_list_state.select_first();
                 }
 
-                app.set_entry(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);
-                app.set_content(match &app.entry { Some(entry) => entry.content_id.clone(), None => None });
             }
 
         }
@@ -44,8 +42,6 @@ pub fn handle(key: Key, app: &mut App) {
                     app.entry_list_state.select(Some(app.entry_items.len() - 1));
                 }
 
-                app.set_entry(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);
-                app.set_content(match &app.entry { Some(entry) => entry.content_id.clone(), None => None });
             }
 
         }
@@ -53,6 +49,9 @@ pub fn handle(key: Key, app: &mut App) {
             app.set_current_route(RouteId::Home, ActiveBlock::Feeds);
         }
         k if common_key_events::select_event(k) || common_key_events::right_event(k) => {
+            app.set_entry(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);
+            app.set_summary();
+            app.set_content(match &app.entry { Some(entry) => entry.content_id.clone(), None => None });
             mark_entry_read(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0).unwrap();
             app.set_current_route(RouteId::Entry, ActiveBlock::Entry);
             app.update_link_items(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);

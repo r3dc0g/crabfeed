@@ -67,7 +67,6 @@ impl<'a> WidgetRef for BlockText<'a> {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .bg(Color::Black)
                     .title(
                         self.title.clone()
                             .unwrap_or("".to_string()))
@@ -110,7 +109,7 @@ where
                 )
                 .highlight_style(
                     Style::default()
-                        .bg(Color::Red)
+                        .bg(Color::DarkGray)
                 ),
             area,
             buf,
