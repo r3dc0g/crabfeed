@@ -10,10 +10,21 @@ pub fn handle(key: Key, app: &mut App) {
             let feeds = &mut app.feed_items;
 
             if !feeds.is_empty() {
-                let next_index = common_key_events::on_down_press_handler(&feeds, app.selected_feed_index);
-                app.selected_feed_index = Some(next_index);
-                app.selected_entry_index = None;
-                app.update_entry_items(app.feed_items[app.selected_feed_index.unwrap_or(0)].1);
+
+                if let Some(index) = app.feed_list_state.selected() {
+                    if index < app.feed_items.len() - 1 {
+                        app.feed_list_state.select_next();
+                    }
+                    else {
+                        app.feed_list_state.select_first();
+                    }
+                }
+                else {
+                    app.feed_list_state.select_first();
+                }
+
+                app.entry_list_state.select_first();
+                app.update_entry_items(app.feed_items[app.feed_list_state.selected().unwrap_or(0)].1);
             }
         }
 
@@ -21,10 +32,21 @@ pub fn handle(key: Key, app: &mut App) {
             let feeds = &mut app.feed_items;
 
             if !feeds.is_empty() {
-                let next_index = common_key_events::on_up_press_handler(&feeds, app.selected_feed_index);
-                app.selected_feed_index = Some(next_index);
-                app.selected_entry_index = None;
-                app.update_entry_items(app.feed_items[app.selected_feed_index.unwrap_or(0)].1);
+
+                if let Some(index) = app.feed_list_state.selected() {
+                    if index > 0 {
+                        app.feed_list_state.select_previous();
+                    }
+                    else {
+                        app.feed_list_state.select(Some(app.feed_items.len() - 1));
+                    }
+                }
+                else {
+                    app.feed_list_state.select(Some(app.feed_items.len() - 1));
+                }
+
+                app.entry_list_state.select_first();
+                app.update_entry_items(app.feed_items[app.feed_list_state.selected().unwrap_or(0)].1);
             }
 
         }

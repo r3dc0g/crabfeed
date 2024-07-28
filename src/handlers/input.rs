@@ -16,8 +16,10 @@ pub fn handle(key: Key, app: &mut App) {
                     app.is_loading = true;
                     app.dispatch(IOEvent::AddFeed(url));
                     app.clear_input();
-                    let last_route = app.pop_navigation_stack().unwrap_or(Route::default());
-                    app.set_current_route(last_route.id, last_route.active_block);
+                    app.pop_navigation_stack().unwrap_or(Route::default());
+                }
+                else {
+                    app.pop_navigation_stack().unwrap_or(Route::default());
                 }
             }
         }

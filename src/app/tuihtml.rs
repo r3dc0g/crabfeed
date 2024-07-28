@@ -226,9 +226,9 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
     elements
 }
 
-pub fn parse_html(html: &str) -> Result<Paragraph, Box<dyn Error>> {
+pub fn parse_html<'a>(html: String) -> Result<Paragraph<'a>, Box<dyn Error>> {
 
-    let dom = Dom::parse(html)?;
+    let dom = Dom::parse(&html)?;
     let children = dom.children;
 
     let elements = Paragraph::new(handle_children(children)).wrap(Wrap::default());
