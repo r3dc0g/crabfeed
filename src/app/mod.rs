@@ -1,8 +1,7 @@
 mod tuihtml;
 
-use crate::db::{delete_feed, find_entry_links, get_feeds, select_entries, select_entry};
+use crate::db::*;
 use crate::prelude::Entry;
-use crate::error::Error;
 
 use crate::network::IOEvent;
 

@@ -1,3 +1,4 @@
+use diesel::sql_query;
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
 use crate::prelude::*;
@@ -5,19 +6,137 @@ use crate::schema::*;
 use crate::error::Error;
 use feed_rs::model;
 use std::env;
+use std::fs;
 use std::fs::create_dir_all;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
+fn setup_database(conn: &mut SqliteConnection) -> Result<()> {
+
+    sql_query("CREATE TABLE feed ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      title VARCHAR, \
+      updated DATETIME, \
+      description TEXT, \
+      language VARCHAR, \
+      published DATETIME \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE entry ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      feed_id INTEGER UNSIGNED NOT NULL, \
+      title VARCHAR, \
+      updated DATETIME, \
+      content_id INTEGER, \
+      summary TEXT, \
+      source VARCHAR, \
+      read BOOLEAN DEFAULT FALSE, \
+      FOREIGN KEY(feed_id) REFERENCES feed(feed_id), \
+      FOREIGN KEY(content_id) REFERENCES content(content_id) \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE author ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      name VARCHAR NOT NULL, \
+      uri VARCHAR, \
+      email VARCHAR \
+        )").execute(conn)?;
+
+    sql_query("CREATE TABLE link ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      href VARCHAR NOT NULL, \
+      rel VARCHAR, \
+      media_type VARCHAR, \
+      href_lang VARCHAR, \
+      title VARCHAR, \
+      length BIGINT \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE content ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      body TEXT, \
+      content_type VARCHAR, \
+      length BIGINT, \
+      src INTEGER, \
+      FOREIGN KEY(src) REFERENCES link(link_id) \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE category ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      term VARCHAR NOT NULL, \
+      scheme VARCHAR, \
+      label VARCHAR \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE feed_author ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      author_id INTEGER NOT NULL, \
+      feed_id INTEGER NOT NULL, \
+      FOREIGN KEY(author_id) REFERENCES author(author_id), \
+      FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE entry_author ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      author_id INTEGER NOT NULL, \
+      entry_id INTEGER NOT NULL, \
+      FOREIGN KEY(author_id) REFERENCES author(author_id), \
+      FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE feed_link ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      link_id INTEGER NOT NULL, \
+      feed_id INTEGER NOT NULL, \
+      FOREIGN KEY(link_id) REFERENCES link(link_id), \
+      FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE entry_link ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      link_id INTEGER NOT NULL, \
+      entry_id INTEGER NOT NULL, \
+      FOREIGN KEY(link_id) REFERENCES link(link_id), \
+      FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE feed_category ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      category_id INTEGER NOT NULL, \
+      feed_id INTEGER NOT NULL, \
+      FOREIGN KEY(category_id) REFERENCES category(category_id), \
+      FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE entry_category ( \
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+      category_id INTEGER NOT NULL, \
+      entry_id INTEGER NOT NULL, \
+      FOREIGN KEY(category_id) REFERENCES category(category_id), \
+      FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
+    )").execute(conn)?;
+
+    Ok(())
+}
+
 pub fn connect() -> Result<SqliteConnection> {
 
     if cfg!(unix) {
+        let mut first_creation = false;
         let home = env::var("HOME").unwrap();
         let database_folder = format!("{}/.local/share/crabfeed/", home);
         let database_url = format!("{}/crabfeed.db", database_folder);
         create_dir_all(database_folder)?;
 
-        let connection = SqliteConnection::establish(&database_url)?;
+        if fs::metadata(&database_url).is_err() {
+            first_creation = true;
+        }
+
+        let mut connection = SqliteConnection::establish(&database_url)?;
+
+        if first_creation {
+            setup_database(&mut connection)?;
+        }
 
         return Ok(connection);
     }
