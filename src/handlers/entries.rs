@@ -7,9 +7,8 @@ use crate::handlers::common_key_events;
 pub fn handle(key: Key, app: &mut App) {
     match key {
         k if common_key_events::down_event(k) => {
-            let entries = &mut app.entry_items;
 
-            if !entries.is_empty() {
+            if !app.entry_items.is_empty() {
                 if let Some(index) = app.entry_list_state.selected() {
                     if index < app.entry_items.len() - 1 {
                         app.entry_list_state.select_next();
@@ -26,9 +25,8 @@ pub fn handle(key: Key, app: &mut App) {
 
         }
         k if common_key_events::up_event(k) => {
-            let entries = &mut app.entry_items;
 
-            if !entries.is_empty() {
+            if !app.entry_items.is_empty() {
 
                 if let Some(index) = app.entry_list_state.selected() {
                     if index > 0 {
