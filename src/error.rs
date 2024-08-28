@@ -29,4 +29,6 @@ pub enum Error {
     #[error(transparent)]
     FeedParsing(#[from] feed_rs::parser::ParseFeedError),
 
+    #[error(transparent)]
+    HTMLParsing(#[from] html_parser::Error)
 }

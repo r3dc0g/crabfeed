@@ -1,13 +1,18 @@
 // Takes in RAW HTML and returns a representation as a list of ratatui widgets
 
-use std::error::Error;
+use crate::error::Error;
 use ratatui::{style::*, text::*, widgets::*};
 use html_parser::{Dom, Node};
 
+pub type Result<T> = core::result::Result<T, Error>;
 
 fn handle_style(node: Node) -> Vec<Span<'static>> {
 
     if let Some(element) = node.element() {
+
+        if element.children.is_empty() {
+            return vec![];
+        }
 
         match element.name.as_str() {
             "b" | "strong" => {
@@ -185,7 +190,8 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
                                     }
                                 }
                                 elements.push(
-                                    Line::from(spans)                                );
+                                    Line::from(spans)
+                                );
                             }
                         }
                     }
@@ -226,12 +232,39 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
     elements
 }
 
-pub fn parse_html<'a>(html: String) -> Result<Paragraph<'a>, Box<dyn Error>> {
+pub fn parse_html<'a>(html: String) -> Result<Paragraph<'a>> {
 
     let dom = Dom::parse(&html)?;
     let children = dom.children;
 
+    if children.is_empty() {
+        return Ok(Paragraph::new(Span::raw("")).wrap(Wrap::default()));
+    }
+
     let elements = Paragraph::new(handle_children(children)).wrap(Wrap::default());
 
     Ok(elements)
+}
+
+#[test]
+fn parse_html_test() {
+
+    let html = r#"
+
+"Today we talk about the dark side of meritocracy, the effects it has on the way people see each other, the dialectic of pride and humility, education reform, and a rethinking of the way we see government officials. Hope you enjoy it. :)
+
+Sponsors:
+Nord VPN: https://www.NordVPN.com/philothis
+Better Help: https://www.BetterHelp.com/PHILTHIS
+
+Thank you so much for listening! Could never do this without your help. 
+
+Website: https://www.philosophizethis.org/
+Patreon: https://www.patreon.com/philosophizethis 
+
+Social:
+Instagram: https://www.instagram.com/philosophizethispodcast
+X: https://twitter.com/iamstephenwest
+Facebook: https://www.facebook.com/philosophizethisshow"
+    "#.to_string();
 }
