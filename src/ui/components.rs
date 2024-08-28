@@ -63,15 +63,16 @@ impl<'a> BlockText<'a> {
 
 impl<'a> WidgetRef for BlockText<'a> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        self.paragraph.clone()
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(
-                        self.title.clone()
-                            .unwrap_or("".to_string()))
+
+        Block::default()
+            .borders(Borders::ALL)
+            .title(
+                self.title.clone().unwrap_or("".to_string())
             )
             .render(area, buf);
+
+        self.paragraph.clone()
+            .render(area.inner(Margin::new(10, 2)), buf);
     }
 }
 

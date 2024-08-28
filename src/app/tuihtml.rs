@@ -6,6 +6,10 @@ use html_parser::{Dom, Node};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
+fn remove_bad_chars(text: &str) -> String {
+    text.replace("&nbsp;", "").replace("&#8217;", "'")
+}
+
 fn handle_style(node: Node) -> Vec<Span<'static>> {
 
     if let Some(element) = node.element() {
@@ -135,7 +139,8 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
     }
     else {
         if let Some(text) = node.text() {
-            return vec![Span::raw(text.to_string())];
+
+            return vec![Span::raw(remove_bad_chars(text))];
         }
         else {
             return vec![];
@@ -250,21 +255,37 @@ pub fn parse_html<'a>(html: String) -> Result<Paragraph<'a>> {
 fn parse_html_test() {
 
     let html = r#"
+                <p>Analysing MQTT data, getting domains unblocked from Cloudflare DNS, making ASCII animations, and why Joe is drawn to Linux Mint. Plus why we don&#8217;t talk about Vivaldi even though it&#8217;s quite good, why Félim was wrong about right click in PuTTY, and Will doesn&#8217;t seem to understand Lemmy.</p>
+<p>&nbsp;</p>
+<p><strong>Discoveries</strong></p>
+<p><a href=""https://github.com/mqtt-tools/mqttdecode"">MQTT decode</a></p>
+<p><a href=""https://radar.cloudflare.com/domains/domain/apps.kde.org"">Cloudflare DNS was blocking apps.kde.org</a></p>
+<p><a href=""https://github.com/cmang/durdraw"">Durdraw</a></p>
+<p><a href=""https://blog.linuxmint.com/?p=4731"">Linux Mint 22</a></p>
+<p>&nbsp;</p>
+<p><strong>Feedback</strong></p>
+<p><a href=""http://feditt.uk"">fedditt.uk</a></p>
+<p><a href=""https://join-lemmy.org/"">Lemmy</a></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p><strong>1Password</strong></p>
+<p>Extended Access Management: Secure every sign-in for every app on every device. Support the show and check it out at <a href=""http://1password.com/latenightlinux"" target=""_blank"" rel=""noopener"" data-saferedirecturl=""https://www.google.com/url?q=http://1password.com/latenightlinux&amp;source=gmail&amp;ust=1719965161398000&amp;usg=AOvVaw1tfxrR7qwesy-7wXh-A0v8""><span class=""il"">1password</span>.<span class=""il"">com</span>/<span class=""il"">latenightlinux</span></a></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<div id=""post-727"" class=""post-727 post type-post status-publish format-standard hentry category-podcast"">
+<div class=""post-content entry-content"">
+<div id=""post-727"" class=""post-727 post type-post status-publish format-standard hentry category-podcast"">
+<div class=""post-content entry-content"">
+<p class=""post-contents entry-content"">See our <a href=""https://latenightlinux.com/contact/"">contact page</a> for ways to get in touch.</p>
+<p><img decoding=""async"" class=""alignnone lazy loaded"" src=""https://latenightlinux.com/wp-content/uploads/latenightlinux-sm.jpg"" width=""207"" height=""207"" data-src=""https://latenightlinux.com/wp-content/uploads/latenightlinux-sm.jpg"" data-was-processed=""true"" /></p>
+<p><strong>RSS</strong>: Subscribe to the <a href=""https://latenightlinux.com/feeds/"">RSS feeds here</a></p>
+</div>
+</div>
+</div>
+</div>
 
-"Today we talk about the dark side of meritocracy, the effects it has on the way people see each other, the dialectic of pride and humility, education reform, and a rethinking of the way we see government officials. Hope you enjoy it. :)
-
-Sponsors:
-Nord VPN: https://www.NordVPN.com/philothis
-Better Help: https://www.BetterHelp.com/PHILTHIS
-
-Thank you so much for listening! Could never do this without your help. 
-
-Website: https://www.philosophizethis.org/
-Patreon: https://www.patreon.com/philosophizethis 
-
-Social:
-Instagram: https://www.instagram.com/philosophizethispodcast
-X: https://twitter.com/iamstephenwest
-Facebook: https://www.facebook.com/philosophizethisshow"
     "#.to_string();
 }
