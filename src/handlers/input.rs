@@ -54,7 +54,8 @@ pub fn handle(key: Key, app: &mut App) {
         }
         Key::Ctrl('v') => {
             let mut clipboard: ClipboardContext = ClipboardProvider::new().unwrap();
-            if let Ok(contents) = clipboard.get_contents() {
+            if let Ok(mut contents) = clipboard.get_contents() {
+                contents.retain(|c| c != '\n');
                 for c in contents.chars() {
                     app.input.insert(app.input_i, c);
                     app.input_i += 1;

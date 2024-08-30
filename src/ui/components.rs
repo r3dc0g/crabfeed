@@ -46,6 +46,7 @@ impl BlockLabel {
 pub struct BlockText<'a> {
     title: Option<String>,
     paragraph: Paragraph<'a>,
+    inner_margin: Option<Margin>,
 }
 
 impl<'a> BlockText<'a> {
@@ -59,20 +60,51 @@ impl<'a> BlockText<'a> {
         self
     }
 
+    pub fn margin(mut self, margin: Margin) -> Self {
+        self.inner_margin = Some(margin);
+        self
+    }
+
 }
 
 impl<'a> WidgetRef for BlockText<'a> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
 
-        Block::default()
-            .borders(Borders::ALL)
-            .title(
-                self.title.clone().unwrap_or("".to_string())
-            )
-            .render(area, buf);
 
-        self.paragraph.clone()
-            .render(area.inner(Margin::new(10, 2)), buf);
+        // let width = area.width;
+        // let height = area.height;
+
+        // self.paragraph.clone()
+        //     .render(area.inner(
+        //         Margin::new(
+        //             (0.05 * width as f32) as u16,
+        //             (0.02 * height as f32) as u16
+        //         )
+        //     ), buf);
+        if let Some(margin) = self.inner_margin {
+
+            Block::default()
+                .borders(Borders::ALL)
+                .title(
+                    self.title.clone().unwrap_or("".to_string())
+                )
+                .render(area, buf);
+
+            Clear.render_ref(area.inner(margin), buf);
+            self.paragraph.clone()
+                .render(area.inner(margin), buf);
+        }
+        else {
+            self.paragraph.clone()
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(
+                            self.title.clone().unwrap_or("".to_string())
+                        )
+                )
+                .render(area, buf);
+        }
     }
 }
 

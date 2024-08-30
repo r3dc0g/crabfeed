@@ -106,18 +106,20 @@ impl Widget for &App {
                                     Paragraph::new(
                                         Line::from(
                                             vec![
-                                                Span::raw("URL: ").style(Style::default().bold()),
+                                                Span::raw("FEED URL: ").style(Style::default().bold()),
                                                 Span::from(
-                                                    &self.input.iter().collect::<String>()
-                                                ).style(Style::default().underlined())
+                                                    &self.input.iter().collect::<String>().replace("\n", "")
+                                                ).style(Style::default().underlined()),
+                                                Span::raw("_"),
                                             ]
                                         )
                                         .alignment(Alignment::Left)
                                     )
+                                    .wrap(Wrap::default())
                                 )
                         )
                     )
-                    .height(3)
+                    .height(8)
                     .width(60)
                     .render(app_layout[1], buf);
                 }
@@ -157,6 +159,12 @@ impl Widget for &App {
                                     .paragraph(
                                         content.clone().scroll((self.entry_line_index, 0))
                                     )
+                                    .margin(
+                                        Margin::new(
+                                            (0.05 * entry_layout[1].width as f32) as u16,
+                                            (0.03 * entry_layout[1].height as f32) as u16
+                                        )
+                                    )
                                     .render(entry_layout[1], buf);
                             }
                             None => {
@@ -167,6 +175,12 @@ impl Widget for &App {
                                             .paragraph(
                                                 summary.clone().scroll((self.entry_line_index, 0))
                                             )
+                                            .margin(
+                                                Margin::new(
+                                                    (0.05 * entry_layout[1].width as f32) as u16,
+                                                    (0.03 * entry_layout[1].height as f32) as u16
+                                                )
+                                            )
                                             .render(entry_layout[1], buf);
                                     }
                                     None => {
@@ -175,6 +189,12 @@ impl Widget for &App {
                                             .paragraph(
                                                 Paragraph::new("No Summary".to_string())
                                                     .wrap(Wrap::default())
+                                            )
+                                            .margin(
+                                                Margin::new(
+                                                    (0.05 * entry_layout[1].width as f32) as u16,
+                                                    (0.03 * entry_layout[1].height as f32) as u16
+                                                )
                                             )
                                             .render(entry_layout[1], buf);
                                     }
