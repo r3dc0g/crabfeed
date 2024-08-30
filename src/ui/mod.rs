@@ -108,13 +108,14 @@ impl Widget for &App {
                                             vec![
                                                 Span::raw("FEED URL: ").style(Style::default().bold()),
                                                 Span::from(
-                                                    &self.input.iter().collect::<String>()
-                                                ).style(Style::default().underlined())
+                                                    &self.input.iter().collect::<String>().replace("\n", "")
+                                                ).style(Style::default().underlined()),
+                                                Span::raw("_"),
                                             ]
                                         )
                                         .alignment(Alignment::Left)
-
                                     )
+                                    .wrap(Wrap::default())
                                 )
                         )
                     )
