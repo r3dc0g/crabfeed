@@ -162,7 +162,7 @@ impl Widget for &App {
                                     .margin(
                                         Margin::new(
                                             (0.05 * entry_layout[1].width as f32) as u16,
-                                            (0.03 * entry_layout[1].height as f32) as u16
+                                            (0.05 * entry_layout[1].height as f32) as u16
                                         )
                                     )
                                     .render(entry_layout[1], buf);
@@ -178,7 +178,7 @@ impl Widget for &App {
                                             .margin(
                                                 Margin::new(
                                                     (0.05 * entry_layout[1].width as f32) as u16,
-                                                    (0.03 * entry_layout[1].height as f32) as u16
+                                                    (0.05 * entry_layout[1].height as f32) as u16
                                                 )
                                             )
                                             .render(entry_layout[1], buf);
@@ -193,7 +193,7 @@ impl Widget for &App {
                                             .margin(
                                                 Margin::new(
                                                     (0.05 * entry_layout[1].width as f32) as u16,
-                                                    (0.03 * entry_layout[1].height as f32) as u16
+                                                    (0.05 * entry_layout[1].height as f32) as u16
                                                 )
                                             )
                                             .render(entry_layout[1], buf);

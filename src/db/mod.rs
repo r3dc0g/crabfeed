@@ -1,3 +1,4 @@
+use html_parser::{Dom, Node};
 use diesel::sql_query;
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
@@ -513,6 +514,17 @@ pub fn insert_links(
 
     }
 
+    if entry_id.is_some() {
+
+        let e_id = entry_id.unwrap();
+
+        let content_links = get_content_links(e_id);
+
+        for link_string in content_links {
+            insert_link(conn, link_string, None, Some(e_id))?;
+        }
+    }
+
     Ok(())
 }
 
@@ -823,4 +835,100 @@ pub fn delete_entry(entry_id: i32) -> Result<()> {
     .execute(conn)?;
 
     Ok(())
+}
+
+fn get_content_links(entry_id: i32) -> Vec<String> {
+    if let Ok(entry) = select_entry(&entry_id) {
+        if let Some(content_id) = &entry.content_id {
+            if let Ok(content) = select_content(content_id) {
+                if let Some(body) = &content.body {
+                    return extract_links(body);
+                }
+                else {
+                    return vec![];
+                }
+            }
+            else {
+                return vec![];
+            }
+        }
+        else {
+            if let Some(summary) = &entry.summary {
+                return extract_links(summary);
+            }
+            else {
+                return vec![];
+            }
+        }
+    }
+    else {
+        return vec![];
+    }
+}
+
+fn extract_links(html: &str) -> Vec<String> {
+
+    let mut links = vec![];
+
+    if let Ok(dom) =  Dom::parse(html) {
+
+        let mut anchors = vec![];
+
+        let mut adj_nodes = vec![];
+
+        for node in dom.children {
+
+            if let Node::Text(text) = node {
+                if text.contains("http") {
+                    links.push(text.to_string());
+                }
+            }
+            else {
+                adj_nodes.push(node);
+            }
+        }
+
+        while !adj_nodes.is_empty() {
+
+            let current_node = adj_nodes.remove(0);
+
+            if let Node::Element(element) = current_node {
+                if element.name == "a" {
+                    anchors.push(element);
+                }
+                else {
+                    for node in element.children {
+
+                        if let Node::Text(text) = node {
+                            if text.contains("http") {
+                                links.push(text.to_string());
+                            }
+                        }
+                        else {
+                            adj_nodes.push(node);
+                        }
+                    }
+
+                }
+            }
+            else if let Node::Text(text) = current_node {
+                if text.contains("http") {
+                    links.push(text.to_string());
+                }
+            }
+        }
+
+        for anchor in anchors {
+            if let Some(href_attr) = anchor.attributes.get("href") {
+                if let Some(link) = href_attr {
+                    links.push(link.to_string());
+                }
+            }
+        }
+    }
+    else {
+        return vec![];
+    }
+
+    links
 }

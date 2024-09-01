@@ -213,7 +213,6 @@ impl App {
 
     pub fn update_link_items(&mut self, entry_id: i32) {
         let links = find_entry_links(entry_id).unwrap_or(vec![]);
-
         self.link_items = links.iter().map(|l| {
             (l.href.clone(), l.id)
         })
