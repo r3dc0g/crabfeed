@@ -8,6 +8,7 @@ pub fn handle(key: Key, app: &mut App) {
     match key {
         k if common_key_events::left_event(k) => {
             app.entry_line_index = 0;
+            app.update_entry_items(app.feed_items[app.feed_list_state.selected().unwrap_or(0)].1);
             app.set_current_route(RouteId::Home, ActiveBlock::Entries);
         }
 
