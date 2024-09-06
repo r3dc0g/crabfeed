@@ -74,10 +74,16 @@ fn setup_database(conn: &mut SqliteConnection) -> Result<()> {
     sql_query("CREATE TABLE media ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         title VARCHAR, \
-        content_id INTEGER, \
         thumbnail VARCHAR, \
-        description VARCHAR, \
-        FOREIGN KEY(content_id) REFERENCES content(content_id) \
+        description VARCHAR \
+    )").execute(conn)?;
+
+    sql_query("CREATE TABLE media_link ( \
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+        link_id INTEGER NOT NULL, \
+        media_id INTEGER NOT NULL, \
+        FOREIGN KEY(link_id) REFERENCES link(link_id), \
+        FOREIGN KEY(media_id) REFERENCES media(media_id) \
     )").execute(conn)?;
 
     sql_query("CREATE TABLE feed_author ( \
@@ -389,11 +395,14 @@ fn insert_entries(
 
         let content_id = insert_content(conn, entry.content.clone())?;
 
+        let media_id = insert_media(conn, entry.media.first().cloned())?;
+
         let new_entry = builder
             .feed_id(feed_id)
             .title(entry.title.clone())
             .updated(entry.updated.clone())
             .content_id(content_id)
+            .media_id(media_id)
             .summary(entry.summary.clone())
             .source(entry.source.clone())
             .build()?;
@@ -594,7 +603,6 @@ pub fn insert_link(
 
 }
 
-
 fn insert_categories(
         conn: &mut SqliteConnection,
         categories: Vec<model::Category>,
@@ -710,6 +718,87 @@ fn insert_content(
         .get_result(conn)?;
 
     Ok(Some(ret_content.id))
+}
+
+pub fn insert_media(
+    conn: &mut SqliteConnection,
+    media: Option<model::MediaObject>
+    ) -> Result<Option<i32>> {
+
+    let Some(media) = media else {
+        return Ok(None);
+    };
+
+    let mut media_builder = MediaBuilder::new();
+
+    let Some(thumbnail) = media.thumbnails.first() else {
+        let new_media = media_builder
+            .title(media.title)
+            .thumbnail(None)
+            .description(media.description)
+            .build()?;
+
+        let ret_media = diesel::insert_into(media::table)
+            .values(&new_media)
+            .returning(Media::as_returning())
+            .get_result(conn)?;
+
+        return Ok(Some(ret_media.id));
+    };
+
+    let new_media = media_builder
+        .title(media.title)
+        .thumbnail(Some(thumbnail.image.uri.clone()))
+        .description(media.description)
+        .build()?;
+
+    let ret_media = diesel::insert_into(media::table)
+        .values(&new_media)
+        .returning(Media::as_returning())
+        .get_result(conn)?;
+
+    for media_content in media.content.iter() {
+
+        if let Some(link) = &media_content.url {
+
+            let mut link_builder = LinkBuilder::new();
+
+            let new_link = link_builder
+                .href(link.to_string())
+                .build()?;
+
+            let ret_link = diesel::insert_into(link::table)
+                .values(&new_link)
+                .returning(Link::as_returning())
+                .get_result(conn)?;
+
+            let mut media_link_builder = MediaLinkBuilder::new();
+
+            let new_media_link = media_link_builder
+                .link_id(ret_link.id)
+                .media_id(ret_media.id)
+                .build()?;
+
+            diesel::insert_into(media_link::table)
+                .values(&new_media_link)
+                .execute(conn)?;
+        }
+    }
+
+    return Ok(Some(ret_media.id));
+}
+
+pub fn select_media(media_id: i32) -> Result<Media> {
+
+    let conn = &mut connect()?;
+
+    let result = media::table
+        .filter(media::id.eq(media_id))
+        .select(Media::as_select())
+        .get_result(conn)?;
+
+    Ok(result)
+
 }
 
 pub fn delete_feed(feed_id: i32) -> Result<()> {

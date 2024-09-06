@@ -35,6 +35,7 @@ diesel::table! {
         title -> Nullable<Text>,
         updated -> Nullable<Timestamp>,
         content_id -> Nullable<Integer>,
+        media_id -> Nullable<Integer>,
         summary -> Nullable<Text>,
         source -> Nullable<Text>,
         read -> Nullable<Bool>,
@@ -112,6 +113,24 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    media (id) {
+        id -> Integer,
+        title -> Nullable<Text>,
+        thumbnail -> Nullable<Text>,
+        description -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    media_link (id) {
+        id -> Integer,
+        link_id -> Integer,
+        media_id -> Integer,
+    }
+}
+
+
 diesel::joinable!(entry -> feed (feed_id));
 diesel::joinable!(entry_author -> author (author_id));
 diesel::joinable!(entry_author -> entry (entry_id));
@@ -125,6 +144,8 @@ diesel::joinable!(feed_category -> category (category_id));
 diesel::joinable!(feed_category -> feed (feed_id));
 diesel::joinable!(feed_link -> feed (feed_id));
 diesel::joinable!(feed_link -> link (link_id));
+diesel::joinable!(media_link -> link (link_id));
+diesel::joinable!(media_link -> media (media_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     author,

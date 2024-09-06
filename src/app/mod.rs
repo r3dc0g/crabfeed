@@ -69,6 +69,7 @@ pub struct App {
     pub total_entries: usize,
     pub entry_content: Option<Paragraph<'static>>,
     pub entry_summary: Option<Paragraph<'static>>,
+    pub entry_description: Option<Paragraph<'static>>,
 }
 
 impl Default for App {
@@ -93,6 +94,7 @@ impl Default for App {
             total_entries: 0,
             entry_content: None,
             entry_summary: None,
+            entry_description: None,
         }
     }
 
@@ -209,6 +211,36 @@ impl App {
             self.entry_summary = None;
         }
 
+    }
+
+    pub fn set_entry_description(&mut self) {
+
+        if let Some(entry) = &self.entry {
+            if let Some(media_id) = entry.media_id {
+                if let Ok(media) = select_media(media_id) {
+                    if let Some(description) = media.description {
+                        if let Ok(tui_description) = tuihtml::parse_html(description) {
+                            self.entry_description = Some(tui_description);
+                        }
+                        else {
+                            self.entry_description = None;
+                        }
+                    }
+                    else {
+                        self.entry_description = None;
+                    }
+                }
+                else {
+                    self.entry_description = None;
+                }
+            }
+            else {
+                self.entry_description = None;
+            }
+        }
+        else {
+            self.entry_description = None;
+        }
     }
 
     pub fn update_link_items(&mut self, entry_id: i32) {
