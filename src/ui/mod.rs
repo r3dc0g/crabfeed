@@ -184,19 +184,38 @@ impl Widget for &App {
                                             .render(entry_layout[1], buf);
                                     }
                                     None => {
-                                        BlockText::default()
-                                            .title(None)
-                                            .paragraph(
-                                                Paragraph::new("No Summary".to_string())
-                                                    .wrap(Wrap::default())
-                                            )
-                                            .margin(
-                                                Margin::new(
-                                                    (0.05 * entry_layout[1].width as f32) as u16,
-                                                    (0.05 * entry_layout[1].height as f32) as u16
-                                                )
-                                            )
-                                            .render(entry_layout[1], buf);
+                                        match &self.entry_description {
+                                            Some(description) => {
+                                                BlockText::default()
+                                                    .title(None)
+                                                    .paragraph(
+                                                        description.clone().scroll((self.entry_line_index, 0))
+                                                    )
+                                                    .margin(
+                                                        Margin::new(
+                                                            (0.05 * entry_layout[1].width as f32) as u16,
+                                                            (0.05 * entry_layout[1].height as f32) as u16
+                                                        )
+                                                    )
+                                                    .render(entry_layout[1], buf);
+                                            }
+                                            None => {
+                                                BlockText::default()
+                                                    .title(None)
+                                                    .paragraph(
+                                                        Paragraph::new("No Summary".to_string())
+                                                            .wrap(Wrap::default())
+                                                    )
+                                                    .margin(
+                                                        Margin::new(
+                                                            (0.05 * entry_layout[1].width as f32) as u16,
+                                                            (0.05 * entry_layout[1].height as f32) as u16
+                                                        )
+                                                    )
+                                                    .render(entry_layout[1], buf);
+
+                                            }
+                                        }
                                     }
                                 }
                             }

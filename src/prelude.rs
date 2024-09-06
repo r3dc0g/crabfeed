@@ -112,6 +112,7 @@ pub struct Entry {
     pub title: Option<String>,
     pub updated: Option<NaiveDateTime>,
     pub content_id: Option<i32>,
+    pub media_id: Option<i32>,
     pub summary: Option<String>,
     pub source: Option<String>,
     pub read: Option<bool>,
@@ -124,6 +125,7 @@ pub struct NewEntry<'a> {
     pub title: Option<&'a str>,
     pub updated: Option<&'a NaiveDateTime>,
     pub content_id: Option<&'a i32>,
+    pub media_id: Option<&'a i32>,
     pub summary: Option<&'a str>,
     pub source: Option<&'a str>,
 }
@@ -134,6 +136,7 @@ pub struct EntryBuilder {
     title: Option<String>,
     updated: Option<NaiveDateTime>,
     content_id: Option<i32>,
+    media_id: Option<i32>,
     summary: Option<String>,
     source: Option<String>,
 }
@@ -178,6 +181,16 @@ impl EntryBuilder {
         self
     }
 
+    pub fn media_id(&mut self, media_id: Option<i32>) -> &mut Self {
+        let Some(entry_media_id) = media_id else {
+            self.media_id = None;
+            return self;
+        };
+
+        self.media_id = Some(entry_media_id);
+        self
+    }
+
     pub fn summary(&mut self, summary: Option<Text>) -> &mut Self {
         let Some(entry_summary) = summary else {
             self.summary = None;
@@ -204,8 +217,72 @@ impl EntryBuilder {
             title: self.title.as_deref(),
             updated: self.updated.as_ref(),
             content_id: self.content_id.as_ref(),
+            media_id: self.media_id.as_ref(),
             summary: self.summary.as_deref(),
             source: self.source.as_deref(),
+        })
+    }
+}
+
+#[derive(Clone, Queryable, Selectable, Identifiable, Debug, PartialEq)]
+#[diesel(table_name = media)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct Media {
+    pub id: i32,
+    pub title: Option<String>,
+    pub thumbnail: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = media)]
+pub struct NewMedia<'a> {
+    pub title: Option<&'a str>,
+    pub thumbnail: Option<&'a str>,
+    pub description: Option<&'a str>,
+}
+
+#[derive(Default)]
+pub struct MediaBuilder {
+    title: Option<String>,
+    thumbnail: Option<String>,
+    description: Option<String>,
+}
+
+impl MediaBuilder {
+    pub fn new() -> Self {
+        MediaBuilder::default()
+    }
+
+    pub fn title(&mut self, title: Option<Text>) -> &mut Self {
+        let Some(media_title) = title else {
+            self.title = None;
+            return self
+        };
+
+        self.title = Some(media_title.content);
+        self
+    }
+
+    pub fn thumbnail(&mut self, thumbnail: Option<String>) -> &mut Self {
+        self.thumbnail = thumbnail;
+        self
+    }
+
+    pub fn description(&mut self, description: Option<Text>) -> &mut Self {
+        let Some(media_description) = description else {
+            self.title = None;
+            return self
+        };
+        self.description = Some(media_description.content);
+        self
+    }
+
+    pub fn build(&self) -> Result<NewMedia> {
+        Ok(NewMedia {
+            title: self.title.as_deref(),
+            thumbnail: self.thumbnail.as_deref(),
+            description: self.description.as_deref(),
         })
     }
 }
@@ -803,5 +880,52 @@ impl ContentBuilder {
            length: self.length.as_ref(),
            src: self.src.as_ref(),
        })
+    }
+}
+
+#[derive(Queryable, Selectable, Debug, Identifiable, Associations)]
+#[diesel(belongs_to(Media))]
+#[diesel(belongs_to(Link))]
+#[diesel(table_name = media_link)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct MediaLink {
+    pub id: i32,
+    pub link_id: i32,
+    pub media_id: i32,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = media_link)]
+pub struct NewMediaLink<'a> {
+    pub link_id: &'a i32,
+    pub media_id: &'a i32,
+}
+
+#[derive(Default)]
+pub struct MediaLinkBuilder {
+    link_id: i32,
+    media_id: i32,
+}
+
+impl MediaLinkBuilder {
+    pub fn new() -> Self {
+       MediaLinkBuilder::default()
+    }
+
+    pub fn link_id(&mut self, link_id: i32) -> &mut Self {
+        self.link_id = link_id;
+        self
+    }
+
+    pub fn media_id(&mut self, media_id: i32) -> &mut Self {
+        self.media_id = media_id;
+        self
+    }
+
+    pub fn build(&self) -> Result<NewMediaLink> {
+        Ok(NewMediaLink {
+            link_id: &self.link_id,
+            media_id: &self.media_id,
+        })
     }
 }

@@ -50,6 +50,7 @@ pub fn handle(key: Key, app: &mut App) {
             app.set_entry(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);
             app.set_summary();
             app.set_content(match &app.entry { Some(entry) => entry.content_id.clone(), None => None });
+            app.set_entry_description();
             mark_entry_read(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0).unwrap();
             app.set_current_route(RouteId::Entry, ActiveBlock::Entry);
             app.update_link_items(app.entry_items[app.entry_list_state.selected().unwrap_or(0)].1.0);
