@@ -242,6 +242,21 @@ impl Widget for &App {
             }
         }
 
+        if self.is_loading {
+            Popup::new(
+                Some(
+                    BlockText::default()
+                        .paragraph(
+                            Paragraph::new("Loading...".to_string())
+                        )
+                        .margin(Margin::new(2, 2))
+                )
+            )
+            .height(5)
+            .width(15)
+            .render(app_layout[1], buf);
+        }
+
         BlockLabel::new()
             .label("Ctrl+a to add feed, Ctrl+d to delete feed, (ESC/Q) to quit".to_string())
             .render(app_layout[2], buf);

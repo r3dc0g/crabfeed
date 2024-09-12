@@ -804,7 +804,7 @@ pub fn select_media(media_id: i32) -> Result<Media> {
 pub fn delete_feed(feed_id: i32) -> Result<()> {
 
     // Get all the entries for the feed
-    // delete each entriy's link, content and author
+    // delete each entry's link, content and author
     // delete the entries, author, link, and category of the feed
     // delete the feed
 
@@ -1031,4 +1031,9 @@ fn extract_links(html: &str) -> Vec<String> {
     }
 
     links
+}
+
+#[test]
+fn delete_entry_test() {
+    assert!(delete_entry(25).is_ok());
 }

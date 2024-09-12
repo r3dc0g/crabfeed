@@ -35,6 +35,7 @@ pub enum ActiveBlock {
     Entries,
     Entry,
     Input,
+    Loading,
 }
 
 impl Default for ActiveBlock {

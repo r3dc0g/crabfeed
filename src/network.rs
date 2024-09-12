@@ -85,7 +85,7 @@ impl<'a> Network<'a> {
         let mut app = self.app.lock().await;
         // Update the app state
         app.update_feed_items();
-
+        app.pop_navigation_stack();
         app.is_loading = false;
         Ok(())
     }
