@@ -13,6 +13,7 @@ pub fn handle(key: Key, app: &mut App) {
             if !app.is_loading {
                 if !app.input.is_empty() {
                     let url = app.input.iter().collect::<String>();
+                    app.loading_msg = "Adding feed...".to_string();
                     app.is_loading = true;
                     app.dispatch(IOEvent::AddFeed(url));
                     app.clear_input();

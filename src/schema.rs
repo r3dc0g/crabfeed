@@ -160,4 +160,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     feed_category,
     feed_link,
     link,
+    media,
+    media_link,
 );

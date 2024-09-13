@@ -2,7 +2,6 @@ mod tuihtml;
 
 use crate::db::*;
 use crate::prelude::Entry;
-
 use crate::network::IOEvent;
 
 use ratatui::widgets::Paragraph;
@@ -35,7 +34,6 @@ pub enum ActiveBlock {
     Entries,
     Entry,
     Input,
-    Loading,
 }
 
 impl Default for ActiveBlock {
@@ -67,6 +65,7 @@ pub struct App {
     pub entry: Option<Entry>,
     pub link_items: Vec<(String, i32)>,
     pub error_msg: Option<String>,
+    pub loading_msg: String,
     pub total_entries: usize,
     pub entry_content: Option<Paragraph<'static>>,
     pub entry_summary: Option<Paragraph<'static>>,
@@ -92,6 +91,7 @@ impl Default for App {
             entry: None,
             link_items: vec![],
             error_msg: None,
+            loading_msg: "Loading...".to_string(),
             total_entries: 0,
             entry_content: None,
             entry_summary: None,
@@ -122,19 +122,19 @@ impl App {
 
     pub fn update_feed_items(&mut self) {
         let index = self.feed_list_state.selected().unwrap_or(0);
+        self.loading_msg = "Reloading Feed Items...".to_string();
         self.is_loading = true;
-        if let Ok(feeds) = get_feeds() {
-            self.feed_items = feeds.iter().map(|f| {
-                (f.title.clone().unwrap_or("No title".to_string()).clone(), f.id)
-            }).collect();
-            if index < self.feed_items.len() {
-                self.feed_list_state.select(Some(index));
-            }
-            else {
-                self.feed_list_state.select(None);
-            }
+        let feeds = get_feeds().unwrap_or(vec![]);
+        self.feed_items = feeds.iter().map(|f| {
+            (f.title.clone().unwrap_or("No title".to_string()).clone(), f.id)
+        }).collect();
+        if index < self.feed_items.len() {
+            self.feed_list_state.select(Some(index));
+        }
+        else {
             self.feed_list_state.select(None);
         }
+        self.feed_list_state.select(None);
         self.update_entry_items(0);
         self.is_loading = false;
     }
@@ -278,22 +278,4 @@ impl App {
         self.input_i = 0;
     }
 
-    pub fn delete_feed(&mut self) {
-        if let Some(feed_index) = self.feed_list_state.selected() {
-            let feed_id = self.feed_items[feed_index].1;
-
-            if let Err(e) = delete_feed(feed_id) {
-                self.error_msg = Some(format!("Error deleting feed: {:?}", e));
-                return;
-            };
-
-            self.feed_items.remove(feed_index);
-            self.update_feed_items();
-        }
-    }
-
-    pub fn _update_on_tick(&mut self) {
-        // There are no events that happen each tick
-        // but there might be in the future ...
-    }
 }

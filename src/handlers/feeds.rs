@@ -1,6 +1,7 @@
 use crate::app::{ActiveBlock, RouteId};
 use crate::{app::App, event::Key};
 use crate::handlers::common_key_events;
+use crate::network::IOEvent;
 
 
 pub fn handle(key: Key, app: &mut App) {
@@ -56,7 +57,9 @@ pub fn handle(key: Key, app: &mut App) {
         }
 
         Key::Ctrl('d') => {
-            app.delete_feed();
+            app.loading_msg = format!("Deleting {}...", app.feed_items[app.feed_list_state.selected().unwrap_or(0)].0);
+            app.is_loading = true;
+            app.dispatch(IOEvent::DeleteFeed(app.feed_items[app.feed_list_state.selected().unwrap_or(0)].1));
         }
 
         _ => {}

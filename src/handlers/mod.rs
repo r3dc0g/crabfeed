@@ -28,7 +28,6 @@ pub fn handle_app(key: Key, app: &mut App) {
 
         Key::Ctrl('u') => {
             app.is_loading = true;
-            app.set_current_route(app.get_current_route().id.clone(), ActiveBlock::Loading);
             app.dispatch(IOEvent::UpdateFeeds);
         }
 
@@ -50,7 +49,6 @@ fn handle_block_event(key: Key, app: &mut App) {
         ActiveBlock::Input => {
             input::handle(key, app);
         }
-        ActiveBlock::Loading => {}
     }
 }
 
