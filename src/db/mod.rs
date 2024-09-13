@@ -332,6 +332,19 @@ pub fn find_entry_categories(entry_id: i32) -> Result<Vec<Category>> {
     Ok(result)
 }
 
+pub fn find_media_links(media_id: i32) -> Result<Vec<Link>> {
+
+    let conn = &mut connect()?;
+
+    let result = media::table
+        .inner_join(media_link::table.inner_join(link::table))
+        .filter(media::id.eq(media_id))
+        .select(Link::as_select())
+        .get_results(conn)?;
+
+    Ok(result)
+}
+
 pub fn get_entries(curr_feed: &Feed) -> Result<Vec<Entry>> {
 
     let conn = &mut connect()?;
@@ -804,7 +817,7 @@ pub fn select_media(media_id: i32) -> Result<Media> {
 pub fn delete_feed(feed_id: i32) -> Result<()> {
 
     // Get all the entries for the feed
-    // delete each entriy's link, content and author
+    // delete each entry's link, content and author
     // delete the entries, author, link, and category of the feed
     // delete the feed
 
@@ -910,6 +923,28 @@ pub fn delete_entry(entry_id: i32) -> Result<()> {
     if let Some(content_id) = entry.content_id {
         diesel::delete(content::table
             .filter(content::id.eq(content_id))
+        )
+        .execute(conn)?;
+    };
+
+    if let Some(media_id) = entry.media_id {
+
+        if let Ok(media_links) = find_media_links(media_id) {
+            for media_link in media_links {
+                diesel::delete(media_link::table
+                    .filter(media_link::id.eq(media_link.id))
+                )
+                .execute(conn)?;
+            }
+        }
+
+        diesel::delete(media_link::table
+            .filter(media_link::media_id.eq(media_id))
+        )
+        .execute(conn)?;
+
+        diesel::delete(media::table
+            .filter(media::id.eq(media_id))
         )
         .execute(conn)?;
     };
@@ -1031,4 +1066,9 @@ fn extract_links(html: &str) -> Vec<String> {
     }
 
     links
+}
+
+#[test]
+fn delete_entry_test() {
+    assert!(delete_entry(25).is_ok());
 }

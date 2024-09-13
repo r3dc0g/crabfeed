@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
 
     let (sync_io_tx, sync_io_rx) = std::sync::mpsc::channel::<IOEvent>();
 
-    // Initialise app stat
+    // Initialise app state
     let app = Arc::new(Mutex::new(App::new(
       sync_io_tx,
     )));

@@ -242,9 +242,17 @@ impl Widget for &App {
             }
         }
 
-        BlockLabel::new()
-            .label("Ctrl+a to add feed, Ctrl+d to delete feed, (ESC/Q) to quit".to_string())
-            .render(app_layout[2], buf);
+
+        if self.is_loading {
+            BlockLabel::new()
+                .label(self.loading_msg.clone())
+                .render(app_layout[2], buf);
+        } else {
+            BlockLabel::new()
+                .label("Ctrl+a to add feed, Ctrl+d to delete feed, (ESC/Q) to quit".to_string())
+                .render(app_layout[2], buf);
+        }
+
 
     }
 }
