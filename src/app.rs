@@ -7,41 +7,28 @@ use crate::tui::Tui;
 use crate::ui::ui::Ui;
 use crate::AppResult;
 
-use crossterm::event::{KeyEvent, MouseEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use ratatui::prelude::CrosstermBackend;
 use ratatui::Frame;
 use std::io;
 
-pub const DEFAULT_ROUTE: Route = Route {
-    id: RouteId::Home,
-    active_block: ActiveBlock::Feeds,
-};
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Default, PartialEq, Debug)]
 pub enum RouteId {
+    #[default]
     Home,
     Entry,
 }
 
-impl Default for RouteId {
-    fn default() -> Self {
-        RouteId::Home
-    }
-}
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub enum ActiveBlock {
+    #[default]
     Feeds,
     Entries,
     Entry,
     Input,
 }
 
-impl Default for ActiveBlock {
-    fn default() -> Self {
-        ActiveBlock::Feeds
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Route {
@@ -49,11 +36,10 @@ pub struct Route {
     pub active_block: ActiveBlock,
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
-enum AppState {
-    #[default]
-    Running,
-    Loading,
+impl Route {
+    pub fn new(id: RouteId, active_block: ActiveBlock) -> Self {
+        Self { id, active_block }
+    }
 }
 
 pub struct App {
@@ -85,6 +71,9 @@ impl App {
 
             match tui.event_handler.next()? {
                 TerminalEvent::Key(key) => {
+                    if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+                        self.is_running = false;
+                    }
                     self.handle_key_event(key);
                 }
                 TerminalEvent::Mouse(mouse) => {
@@ -131,8 +120,8 @@ impl App {
 
     }
 
-    pub fn handle_tick_event(&mut self, tick: Tick) {
-
+    pub fn handle_tick_event(&mut self, _tick: Tick) {
+        self.ui.update();
     }
 
     // pub fn update_feed_items(&mut self) {

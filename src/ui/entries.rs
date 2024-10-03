@@ -1,4 +1,4 @@
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::style::Stylize;
 use ratatui::{
     prelude::*,
@@ -6,15 +6,50 @@ use ratatui::{
     layout::Rect, style::Style,
     widgets::ListState
 };
-use crate::db::get_entries;
+use crate::app::{ActiveBlock, Route, RouteId};
+use crate::db::{get_entries, mark_entry_read};
 use crate::prelude::{Entry, Feed};
 
-use super::{components::*, UiCallback};
+use super::{components::*, UiCallback, SELECTED_STYLE, UNSELECTED_STYLE};
 use super::View;
 
 pub struct Entries {
     list_state: ListState,
     entry_items: Vec<Entry>,
+    selected: bool,
+}
+
+impl Entries {
+    pub fn new(selected_feed: Option<&Feed>) -> Self {
+        match selected_feed {
+            Some(feed) => {
+                Self {
+                    list_state: ListState::default(),
+                    entry_items: get_entries(feed).unwrap_or(vec![]),
+                    selected: false,
+                }
+            }
+            None => {
+                Self {
+                    list_state: ListState::default(),
+                    entry_items: vec![],
+                    selected: false,
+                }
+            }
+        }
+    }
+
+    pub fn select(&mut self, selected: bool) {
+        self.selected = selected;
+    }
+
+    pub fn update_entries(&mut self, feed: &Feed) {
+        self.entry_items = get_entries(feed).unwrap_or(vec![]);
+    }
+
+    pub fn reset(&mut self) {
+        self.list_state.select(None);
+    }
 }
 
 impl View for Entries {
@@ -51,31 +86,76 @@ impl View for Entries {
 
         ItemList::new(&lines)
             .title(Some(format!("Entries ({}/{})", unread_len, list_len)))
+            .style(match self.selected {
+                true => SELECTED_STYLE,
+                false => UNSELECTED_STYLE,
+            })
             .render(area, buf, &mut self.list_state.clone());
 
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
-        None
-    }
-
-}
-
-impl Entries {
-    pub fn new(selected_feed: Option<&Feed>) -> Self {
-        match selected_feed {
-            Some(feed) => {
-                Self {
-                    list_state: ListState::default(),
-                    entry_items: get_entries(feed).unwrap_or(vec![]),
+        match key.code {
+            KeyCode::Char('j') | KeyCode::Down => {
+                if let Some(index) = self.list_state.selected() {
+                    if index < self.entry_items.len() - 1 {
+                        self.list_state.select_next();
+                    }
+                    else {
+                        self.list_state.select_first();
+                    }
                 }
-            }
-            None => {
-                Self {
-                    list_state: ListState::default(),
-                    entry_items: vec![],
+                else {
+                    self.list_state.select_first();
                 }
-            }
+
+                return None;
+            },
+            KeyCode::Char('k') | KeyCode::Up => {
+                if let Some(index) = self.list_state.selected() {
+                    if index > 0 {
+                        self.list_state.select(Some(index - 1));
+                    }
+                    else {
+                        self.list_state.select(Some(self.entry_items.len() - 1));
+                    }
+                }
+                else {
+                    self.list_state.select(Some(self.entry_items.len() - 1));
+                }
+                return None;
+            },
+            KeyCode::Char('l') | KeyCode::Left => {
+                let entry = Some(self.entry_items[self.list_state.selected().unwrap_or(0)].clone());
+                if let Some(ref real_entry) = entry {
+                    if let Err(_) = mark_entry_read(real_entry.id) {
+                        // TODO: Error Handling
+                    }
+                }
+                return Some(
+                    Box::new(
+                        move |app| {
+                            app.ui.set_current_route(Route::new(RouteId::Entry, ActiveBlock::Entry));
+                            app.ui.set_entry(entry.clone());
+                            Ok(())
+                        }
+                    )
+                )
+            },
+            KeyCode::Char('h') | KeyCode::Right => {
+                return Some(
+                    Box::new(
+                        move |app| {
+                            app.ui.back();
+                            Ok(())
+                        }
+                    )
+                )
+            },
+            _ => None
+
         }
     }
+
 }
+

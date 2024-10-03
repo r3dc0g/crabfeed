@@ -3,8 +3,8 @@
 use crate::error::Error;
 use ratatui::{style::*, text::*, widgets::*};
 use html_parser::{Dom, Node};
+use crate::AppResult;
 
-pub type Result<T> = core::result::Result<T, Error>;
 
 fn remove_bad_chars(text: &str) -> String {
     text.replace("&nbsp;", "").replace("&#8217;", "'")
@@ -237,7 +237,7 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
     elements
 }
 
-pub fn parse_html<'a>(html: String) -> Result<Paragraph<'a>> {
+pub fn parse_html<'a>(html: String) -> AppResult<Paragraph<'a>> {
 
     let dom = Dom::parse(&html)?;
     let children = dom.children;

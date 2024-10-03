@@ -3,11 +3,10 @@ use super::components::*;
 use super::{View, UiCallback};
 use ratatui::prelude::*;
 use ratatui::widgets::{ListState, Paragraph, Wrap};
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 
 pub struct Entry {
     entry: Option<EntryModel>,
-    list_state: ListState,
     line_index: u16,
     link_items: Vec<(String, i32)>,
     content: Option<Paragraph<'static>>,
@@ -16,16 +15,19 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn new() -> Self {
+    pub fn new(entry: Option<EntryModel>) -> Self {
         Self {
-            entry: None,
-            list_state: ListState::default(),
+            entry,
             line_index: 0,
             link_items: Vec::new(),
             content: None,
             summary: None,
             description: None,
         }
+    }
+
+    pub fn set_entry(&mut self, entry: Option<EntryModel>) {
+        self.entry = entry;
     }
 }
 
@@ -146,7 +148,30 @@ impl View for Entry {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
-        None
+        match key.code {
+            KeyCode::Char('j') | KeyCode::Down => {
+                self.line_index += 1;
+                return None;
+            },
+            KeyCode::Char('k') | KeyCode::Up => {
+                if self.line_index > 0 {
+                    self.line_index -= 1;
+                }
+                return None;
+            },
+            KeyCode::Char('h') | KeyCode::Esc => {
+                return Some(Box::new(
+                    move |app| {
+                        app.ui.update_entries();
+                        app.ui.back();
+                        Ok(())
+                    }
+                ))
+            }
+            _ => {
+                None
+            }
+        }
     }
 }
 

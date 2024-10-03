@@ -8,6 +8,7 @@ mod feeds;
 mod entries;
 mod entry;
 pub mod ui;
+mod util;
 
 pub type UiCallback = Box<dyn Fn(&mut App) -> AppResult<()>>;
 const SELECTED_STYLE: Style = Style::new().fg(Color::Red);
