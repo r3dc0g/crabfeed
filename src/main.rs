@@ -7,7 +7,6 @@ mod tui;
 mod app;
 mod network;
 mod event;
-// mod handlers;
 mod time;
 
 use error::Error;
