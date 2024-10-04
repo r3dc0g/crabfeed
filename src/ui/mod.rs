@@ -3,12 +3,14 @@ use ratatui::{buffer::Buffer, layout::Rect, style::{Color, Style}};
 
 use crate::{app::App, AppResult};
 
+mod add;
 mod components;
 mod feeds;
 mod entries;
 mod entry;
 pub mod ui;
 mod util;
+
 
 pub type UiCallback = Box<dyn Fn(&mut App) -> AppResult<()>>;
 const SELECTED_STYLE: Style = Style::new().fg(Color::Red);

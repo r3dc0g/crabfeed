@@ -1,6 +1,6 @@
 use crate::event::{EventHandler, TerminalEvent};
 use crate::network::NetworkHandler;
-use crate::time::{Tick, SystemTimeTick};
+use crate::time::{SystemTimeTick, Tick, TICK_RATE};
 use crate::tui::Tui;
 use crate::ui::ui::Ui;
 use crate::AppResult;
@@ -65,8 +65,6 @@ impl App {
         let mut tui = Tui::new(backend, event_handler)?;
 
         while self.is_running {
-            let now = Tick::now();
-
             match tui.event_handler.next()? {
                 TerminalEvent::Key(key) => {
                     if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
@@ -121,163 +119,5 @@ impl App {
     pub fn handle_tick_event(&mut self, _tick: Tick) {
         self.ui.update();
     }
-
-    // pub fn update_feed_items(&mut self) {
-    //     let index = self.feed_list_state.selected().unwrap_or(0);
-    //     self.loading_msg = "Reloading Feed Items...".to_string();
-    //     self.is_loading = true;
-    //     let feeds = get_feeds().unwrap_or(vec![]);
-    //     self.feed_items = feeds.iter().map(|f| {
-    //         (f.title.clone().unwrap_or("No title".to_string()).clone(), f.id)
-    //     }).collect();
-    //     if index < self.feed_items.len() {
-    //         self.feed_list_state.select(Some(index));
-    //     }
-    //     else {
-    //         self.feed_list_state.select(None);
-    //     }
-    //     self.feed_list_state.select(None);
-    //     self.update_entry_items(0);
-    //     self.is_loading = false;
-    // }
-
-    // pub fn update_entry_items(&mut self, feed_id: i32) {
-    //     let entries = select_entries(feed_id).unwrap_or(vec![]);
-    //     let index = self.entry_list_state.selected();
-    //     self.entry_items = entries.iter().rev().map(|e| {
-    //         (e.title.clone().unwrap_or("No Title".to_string()), (e.id, e.read.unwrap_or(false)))
-    //     })
-    //     .collect();
-    //     if let Some(index) = index {
-    //         if index < self.entry_items.len() {
-    //             self.entry_list_state.select(Some(index));
-    //         }
-    //         else {
-    //             self.entry_list_state.select(None);
-    //         }
-    //     }
-    //     else {
-    //         self.entry_list_state.select(None);
-    //     }
-
-    //     self.total_entries = self.entry_items.len();
-    // }
-
-    // pub fn set_entry(&mut self, entry_id: i32) {
-    //     if let Ok(entry) = select_entry(&entry_id) {
-    //         self.entry = Some(entry);
-    //         return;
-    //     }
-
-    //     self.entry = None;
-    // }
-
-    // pub fn set_content(&mut self, content: Option<i32>) {
-
-    //     match content {
-    //         Some(content_id) => {
-    //             if let Ok(content) = select_content(&content_id) {
-    //                 let content_html = content.body.clone().unwrap_or("".to_string());
-
-    //                 if let Ok(tui_content) = tuihtml::parse_html(content_html) {
-    //                     self.entry_content = Some(tui_content);
-    //                 }
-    //                 else {
-    //                     self.entry_content = None;
-    //                 }
-    //             }
-    //         }
-
-    //         None => {
-    //             self.entry_content = None;
-    //         }
-    //     }
-
-    // }
-
-    // pub fn set_summary(&mut self) {
-
-    //     if let Some(entry) = &self.entry {
-    //         if let Some(summary_html) = &entry.summary {
-    //             if let Ok(tui_summary) = tuihtml::parse_html(summary_html.to_string()) {
-    //                 self.entry_summary = Some(tui_summary);
-    //             }
-    //             else {
-    //                 self.entry_summary = None;
-    //             }
-    //         }
-    //         else {
-    //             self.entry_summary = None;
-    //         }
-    //     }
-    //     else {
-    //         self.entry_summary = None;
-    //     }
-
-    // }
-
-    // pub fn set_entry_description(&mut self) {
-
-    //     if let Some(entry) = &self.entry {
-    //         if let Some(media_id) = entry.media_id {
-    //             if let Ok(media) = select_media(media_id) {
-    //                 if let Some(description) = media.description {
-    //                     if let Ok(tui_description) = tuihtml::parse_html(description) {
-    //                         self.entry_description = Some(tui_description);
-    //                     }
-    //                     else {
-    //                         self.entry_description = None;
-    //                     }
-    //                 }
-    //                 else {
-    //                     self.entry_description = None;
-    //                 }
-    //             }
-    //             else {
-    //                 self.entry_description = None;
-    //             }
-    //         }
-    //         else {
-    //             self.entry_description = None;
-    //         }
-    //     }
-    //     else {
-    //         self.entry_description = None;
-    //     }
-    // }
-
-    // pub fn update_link_items(&mut self, entry_id: i32) {
-    //     let links = find_entry_links(entry_id).unwrap_or(vec![]);
-    //     self.link_items = links.iter().map(|l| {
-    //         (l.href.clone(), l.id)
-    //     })
-    //     .collect();
-    // }
-
-    // pub fn push_navigation_stack(&mut self, next_route_id: RouteId, next_active_block: ActiveBlock) {
-    //     self.navigation_stack.push(Route { id: next_route_id, active_block: next_active_block});
-    // }
-
-    // pub fn pop_navigation_stack(&mut self) -> Option<Route> {
-    //     if self.navigation_stack.len() > 1 {
-    //         self.navigation_stack.pop()
-    //     } else {
-    //         None
-    //     }
-    // }
-
-    // pub fn get_current_route(&self) -> &Route {
-    //     self.navigation_stack.last().unwrap_or(&DEFAULT_ROUTE)
-    // }
-
-    // pub fn set_current_route(&mut self, route: RouteId, active_block: ActiveBlock) {
-    //     self.push_navigation_stack(route, active_block);
-    // }
-
-    // pub fn clear_input(&mut self) {
-    //     self.input.clear();
-    //     self.input_cursor_position = 0;
-    //     self.input_i = 0;
-    // }
 
 }

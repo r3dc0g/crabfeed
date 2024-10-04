@@ -4,25 +4,23 @@ use super::{components::*, UiCallback};
 use super::entries::Entries;
 use super::feeds::Feeds;
 use super::entry::Entry as EntryView;
+use super::add::Add;
 use super::View;
 
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::prelude::*;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 
 pub struct Ui {
     navigation_stack: Vec<Route>,
-
-    // For input text area
-    // pub input: Vec<char>,
-    // pub input_cursor_position: usize,
-    // pub input_i: usize,
     pub error_msg: Option<String>,
     pub loading_msg: String,
     pub is_loading: bool,
+    show_add_feed_popup: bool,
     feeds: Feeds,
     entries: Entries,
     entry: EntryView,
+    add_feed_popup: Add
 }
 
 impl Ui {
@@ -32,15 +30,18 @@ impl Ui {
         feeds.select(true);
         let entries = Entries::new(feeds.get_selected_feed().as_ref());
         let entry = EntryView::new(None);
+        let add_feed_popup = Add::new();
 
         Self {
             navigation_stack: vec![Route::default()],
             error_msg: None,
             loading_msg: "Loading...".to_string(),
             is_loading: false,
+            show_add_feed_popup: false,
             feeds,
             entries,
             entry,
+            add_feed_popup,
         }
     }
 
@@ -92,6 +93,10 @@ impl Ui {
         }
     }
 
+    pub fn show_add_feed_popup(&mut self, show: bool) {
+        self.show_add_feed_popup = show;
+    }
+
     pub fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key {
             _ if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc => {
@@ -107,6 +112,13 @@ impl Ui {
                 else {
                     return None;
                 }
+            }
+            _ if key.code == KeyCode::Char('a') && key.modifiers == KeyModifiers::CONTROL => {
+                self.show_add_feed_popup(true);
+                return None;
+            }
+            _ if self.show_add_feed_popup => {
+                self.add_feed_popup.handle_key_event(key)
             }
             _ => {
                 let current_route = self.get_current_route().unwrap_or(&Route::default()).clone();
@@ -171,6 +183,10 @@ impl Widget for &mut Ui {
             RouteId::Entry => {
                 self.entry.render(app_layout[1], buf);
             }
+        }
+
+        if self.show_add_feed_popup {
+            self.add_feed_popup.render(app_layout[1], buf);
         }
 
         if self.is_loading {
