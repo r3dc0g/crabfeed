@@ -27,7 +27,9 @@ impl NetworkHandler {
             tokio::spawn(
                 async move {
                     while let Ok(event) = receiver.recv() {
-                        NetworkHandler::handle_event(event).await;
+                        if let Err(_) = NetworkHandler::handle_event(event).await {
+                            // TODO: Log error
+                        }
                     }
                 }
             )

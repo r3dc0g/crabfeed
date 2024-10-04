@@ -1,5 +1,3 @@
-mod tuihtml;
-
 use crate::event::{EventHandler, TerminalEvent};
 use crate::network::NetworkHandler;
 use crate::time::{Tick, SystemTimeTick};

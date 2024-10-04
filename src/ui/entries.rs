@@ -44,7 +44,9 @@ impl Entries {
     }
 
     pub fn update_entries(&mut self, feed: &Feed) {
-        self.entry_items = get_entries(feed).unwrap_or(vec![]);
+        let mut items = get_entries(feed).unwrap_or(vec![]);
+        items.reverse();
+        self.entry_items = items;
     }
 
     pub fn reset(&mut self) {

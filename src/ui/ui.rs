@@ -19,6 +19,7 @@ pub struct Ui {
     // pub input_i: usize,
     pub error_msg: Option<String>,
     pub loading_msg: String,
+    pub is_loading: bool,
     feeds: Feeds,
     entries: Entries,
     entry: EntryView,
@@ -36,6 +37,7 @@ impl Ui {
             navigation_stack: vec![Route::default()],
             error_msg: None,
             loading_msg: "Loading...".to_string(),
+            is_loading: false,
             feeds,
             entries,
             entry,
@@ -55,7 +57,6 @@ impl Ui {
     }
 
     pub fn update_entries(&mut self) {
-        self.entries.reset();
         let current_feed = self.feeds.get_selected_feed();
         match current_feed {
             Some(feed) => {
@@ -170,6 +171,16 @@ impl Widget for &mut Ui {
             RouteId::Entry => {
                 self.entry.render(app_layout[1], buf);
             }
+        }
+
+        if self.is_loading {
+            BlockLabel::new()
+                .label(self.loading_msg.clone())
+                .render(app_layout[2], buf);
+        } else {
+            BlockLabel::new()
+                .label("Ctrl+a to add feed, Ctrl+d to delete feed, (ESC/Q) to quit".to_string())
+                .render(app_layout[2], buf);
         }
     }
 }

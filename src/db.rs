@@ -801,7 +801,7 @@ pub fn insert_media(
     return Ok(Some(ret_media.id));
 }
 
-pub fn select_media(media_id: i32) -> Result<Media> {
+pub fn select_media(media_id: &i32) -> Result<Media> {
 
     let conn = &mut connect()?;
 

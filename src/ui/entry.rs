@@ -1,5 +1,7 @@
-use crate::prelude::Entry as EntryModel;
+use crate::db::{find_entry_links, find_media_links, select_content, select_media};
+use crate::prelude::{Entry as EntryModel, Link};
 use super::components::*;
+use super::util::parse_html;
 use super::{View, UiCallback};
 use ratatui::prelude::*;
 use ratatui::widgets::{ListState, Paragraph, Wrap};
@@ -8,7 +10,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 pub struct Entry {
     entry: Option<EntryModel>,
     line_index: u16,
-    link_items: Vec<(String, i32)>,
+    link_items: Vec<Link>,
     content: Option<Paragraph<'static>>,
     summary: Option<Paragraph<'static>>,
     description: Option<Paragraph<'static>>,
@@ -28,6 +30,76 @@ impl Entry {
 
     pub fn set_entry(&mut self, entry: Option<EntryModel>) {
         self.entry = entry;
+        self.line_index = 0;
+        self.get_content();
+        self.get_summary();
+        self.get_description();
+        self.get_links();
+    }
+
+    fn get_content(&mut self) {
+        if let Some(entry) = &self.entry {
+            if let Some(content_id) = entry.content_id {
+                if let Ok(content) = select_content(&content_id) {
+                    if let Some(body) = content.body {
+                        if let Ok(tui_content) = parse_html(body.clone()) {
+                            self.content = Some(tui_content);
+                        }
+                        else {
+                            self.content = Some(Paragraph::new(body.clone()).wrap(Wrap::default()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn get_summary(&mut self) {
+        if let Some(entry) = &self.entry {
+            if let Some(summary) = &entry.summary {
+                if let Ok(tui_summary) = parse_html(summary.clone()) {
+                    self.summary = Some(tui_summary);
+                }
+                else {
+                    self.summary = Some(Paragraph::new(summary.clone()).wrap(Wrap::default()));
+                }
+            }
+        }
+    }
+
+    fn get_description(&mut self) {
+        if let Some(entry) = &self.entry {
+            if let Some(media_id) = entry.media_id {
+                if let Ok(media) = select_media(&media_id) {
+                    if let Some(description) = &media.description {
+                        if let Ok(tui_description) = parse_html(description.clone()) {
+                            self.description = Some(tui_description);
+                        }
+                        else {
+                            self.description = Some(Paragraph::new(description.clone()).wrap(Wrap::default()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn get_links(&mut self) {
+        if let Some(entry) = &self.entry {
+            if let Ok(links) = find_entry_links(entry.id) {
+                for link in links.iter() {
+                    self.link_items.push(link.clone());
+                }
+            }
+
+            if let Some(media_id) = entry.media_id {
+                if let Ok(links) = find_media_links(media_id) {
+                    for link in links.iter() {
+                        self.link_items.push(link.clone());
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -127,7 +199,7 @@ impl View for Entry {
                     }
                 }
 
-                let (links, _): (Vec<String>, Vec<i32>) = self.link_items.clone().into_iter().map(|(link, id)| (link, id)).unzip();
+                let links: Vec<String> = self.link_items.clone().into_iter().map(|link| link.href).collect();
 
                 ItemList::new(&links)
                     .title(Some("Links".to_string()))
