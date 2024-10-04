@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::network::NetworkEvent;
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Generic error: {0}")]
@@ -30,5 +32,8 @@ pub enum Error {
     FeedParsing(#[from] feed_rs::parser::ParseFeedError),
 
     #[error(transparent)]
-    HTMLParsing(#[from] html_parser::Error)
+    HTMLParsing(#[from] html_parser::Error),
+
+    #[error(transparent)]
+    SendError(#[from] std::sync::mpsc::SendError<NetworkEvent>),
 }
