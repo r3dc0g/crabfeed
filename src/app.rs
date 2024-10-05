@@ -1,6 +1,6 @@
 use crate::event::{EventHandler, TerminalEvent};
 use crate::network::NetworkHandler;
-use crate::time::{SystemTimeTick, Tick, TICK_RATE};
+use crate::time::Tick;
 use crate::tui::Tui;
 use crate::ui::ui::Ui;
 use crate::AppResult;
@@ -24,7 +24,7 @@ pub enum ActiveBlock {
     Feeds,
     Entries,
     Entry,
-    Input,
+    AddFeed,
 }
 
 
@@ -117,6 +117,12 @@ impl App {
     }
 
     pub fn handle_tick_event(&mut self, _tick: Tick) {
+        if self.is_loading {
+            if let Ok(_) = self.network_handler.next() {
+                self.ui.update_feeds();
+                self.is_loading = false;
+            }
+        }
         self.ui.update();
     }
 

@@ -1,4 +1,4 @@
-use crate::AppResult;
+use crate::{time::TIME_STEP, AppResult};
 use crate::error::Error;
 use std::sync::mpsc;
 
@@ -8,6 +8,7 @@ use tokio::task::JoinHandle;
 use crate::db::{self, find_feed_links, get_feeds, insert_feed, insert_link, delete_feed};
 
 pub enum NetworkEvent {
+    Complete,
     UpdateFeeds,
     AddFeed(String),
     DeleteFeed(i32),
@@ -15,6 +16,7 @@ pub enum NetworkEvent {
 
 pub struct NetworkHandler {
     sender: mpsc::Sender<NetworkEvent>,
+    receiver: mpsc::Receiver<NetworkEvent>,
     handler: JoinHandle<()>,
 }
 
@@ -22,12 +24,18 @@ impl NetworkHandler {
     pub fn new() -> Self {
 
         let (sender, receiver) = mpsc::channel();
+        let (sender2, receiver2) = mpsc::channel();
 
         let handler = {
+            let sender = sender2.clone();
             tokio::spawn(
                 async move {
                     while let Ok(event) = receiver.recv() {
                         if let Err(_) = NetworkHandler::handle_event(event).await {
+                            // TODO: Log error
+                        }
+
+                        if let Err(_) = sender.send(NetworkEvent::Complete) {
                             // TODO: Log error
                         }
                     }
@@ -37,6 +45,7 @@ impl NetworkHandler {
 
         Self {
             sender,
+            receiver: receiver2,
             handler,
         }
     }
@@ -44,6 +53,11 @@ impl NetworkHandler {
     pub fn dispatch(&self, event: NetworkEvent) -> AppResult<()> {
         self.sender.send(event)?;
         Ok(())
+    }
+
+    pub fn next(&self) -> AppResult<NetworkEvent> {
+        let event = self.receiver.recv_timeout(TIME_STEP / 4)?;
+        Ok(event)
     }
 
     // Handle Event
@@ -58,6 +72,7 @@ impl NetworkHandler {
             NetworkEvent::DeleteFeed(id) => {
                 NetworkHandler::delete_feed(id).await?;
             }
+            _ => {}
         }
 
         Ok(())

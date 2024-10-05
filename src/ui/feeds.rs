@@ -41,6 +41,10 @@ impl Feeds {
     pub fn select(&mut self, selected: bool) {
         self.selected = selected;
     }
+
+    pub fn update_feeds(&mut self) {
+        self.feed_items = get_feeds().unwrap_or(vec![]);
+    }
 }
 
 impl View for Feeds {
@@ -102,7 +106,7 @@ impl View for Feeds {
                     )
                 )
             },
-            KeyCode::Char('l') | KeyCode::Left => {
+            KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => {
                 return Some(
                     Box::new(
                         move |app| {

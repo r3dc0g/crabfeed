@@ -106,8 +106,9 @@ impl View for Add {
                 self.reset();
                 Some(Box::new(
                     move |app| {
-                        app.ui.show_add_feed_popup(false);
+                        app.is_loading = true;
                         app.network_handler.dispatch(NetworkEvent::AddFeed(url.clone()))?;
+                        app.ui.back();
                         Ok(())
                     }
                 ))

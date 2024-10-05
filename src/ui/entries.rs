@@ -127,7 +127,7 @@ impl View for Entries {
                 }
                 return None;
             },
-            KeyCode::Char('l') | KeyCode::Left => {
+            KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => {
                 let entry = Some(self.entry_items[self.list_state.selected().unwrap_or(0)].clone());
                 if let Some(ref real_entry) = entry {
                     if let Err(_) = mark_entry_read(real_entry.id) {
