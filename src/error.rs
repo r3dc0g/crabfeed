@@ -36,4 +36,7 @@ pub enum Error {
 
     #[error(transparent)]
     SendError(#[from] std::sync::mpsc::SendError<NetworkEvent>),
+
+    #[error(transparent)]
+    RecvTimeout(#[from] std::sync::mpsc::RecvTimeoutError),
 }

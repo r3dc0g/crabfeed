@@ -1,4 +1,5 @@
 use crate::app::{Route, RouteId, ActiveBlock};
+use crate::network::NetworkEvent;
 use crate::prelude::Entry;
 use super::{components::*, UiCallback};
 use super::entries::Entries;
@@ -16,7 +17,6 @@ pub struct Ui {
     pub error_msg: Option<String>,
     pub loading_msg: String,
     pub is_loading: bool,
-    show_add_feed_popup: bool,
     feeds: Feeds,
     entries: Entries,
     entry: EntryView,
@@ -37,7 +37,6 @@ impl Ui {
             error_msg: None,
             loading_msg: "Loading...".to_string(),
             is_loading: false,
-            show_add_feed_popup: false,
             feeds,
             entries,
             entry,
@@ -67,6 +66,10 @@ impl Ui {
         }
     }
 
+    pub fn update_feeds(&mut self) {
+        self.feeds.update_feeds();
+    }
+
     pub fn set_entry(&mut self, entry: Option<Entry>) {
         self.entry.set_entry(entry);
     }
@@ -93,10 +96,6 @@ impl Ui {
         }
     }
 
-    pub fn show_add_feed_popup(&mut self, show: bool) {
-        self.show_add_feed_popup = show;
-    }
-
     pub fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key {
             _ if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc => {
@@ -114,11 +113,20 @@ impl Ui {
                 }
             }
             _ if key.code == KeyCode::Char('a') && key.modifiers == KeyModifiers::CONTROL => {
-                self.show_add_feed_popup(true);
+                self.set_current_route(Route::new(RouteId::Home, ActiveBlock::AddFeed));
                 return None;
             }
-            _ if self.show_add_feed_popup => {
-                self.add_feed_popup.handle_key_event(key)
+            _ if key.code == KeyCode::Char('u') && key.modifiers == KeyModifiers::CONTROL => {
+                return Some(
+                    Box::new(
+                        move |app| {
+                            app.network_handler.dispatch(NetworkEvent::UpdateFeeds)?;
+                            app.is_loading = true;
+                            app.ui.is_loading = true;
+                            Ok(())
+                        }
+                    )
+                )
             }
             _ => {
                 let current_route = self.get_current_route().unwrap_or(&Route::default()).clone();
@@ -130,6 +138,9 @@ impl Ui {
                             }
                             ActiveBlock::Entries => {
                                 self.entries.handle_key_event(key)
+                            }
+                            ActiveBlock::AddFeed => {
+                                self.add_feed_popup.handle_key_event(key)
                             }
                             _ => {
                                 None
@@ -162,7 +173,9 @@ impl Widget for &mut Ui {
             .label("Crabfeed".to_string())
             .render(app_layout[0], buf);
 
-        match self.get_current_route().unwrap_or(&Route::default()).id {
+        let current_route = self.get_current_route().unwrap_or(&Route::default()).clone();
+
+        match current_route.id {
             RouteId::Home => {
 
                 let lists_section = Layout::new(
@@ -178,15 +191,18 @@ impl Widget for &mut Ui {
 
                 self.entries.render(lists_section[1], buf);
 
+                match current_route.active_block {
+                    ActiveBlock::AddFeed => {
+                        self.add_feed_popup.render(app_layout[1], buf);
+                    }
+                    _ => {}
+                }
+
             }
 
             RouteId::Entry => {
                 self.entry.render(app_layout[1], buf);
             }
-        }
-
-        if self.show_add_feed_popup {
-            self.add_feed_popup.render(app_layout[1], buf);
         }
 
         if self.is_loading {
