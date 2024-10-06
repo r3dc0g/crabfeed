@@ -1,5 +1,5 @@
 use crate::event::{EventHandler, TerminalEvent};
-use crate::network::NetworkHandler;
+use crate::network::{NetworkEvent, NetworkHandler};
 use crate::time::Tick;
 use crate::tui::Tui;
 use crate::ui::ui::Ui;
@@ -52,7 +52,7 @@ impl App {
     pub fn new() -> Self {
         App {
             is_running: true,
-            is_loading: true,
+            is_loading: false,
             ui: Ui::new(),
             network_handler: NetworkHandler::new(),
         }
@@ -117,10 +117,21 @@ impl App {
     }
 
     pub fn handle_tick_event(&mut self, _tick: Tick) {
+        assert_eq!(self.ui.is_loading, self.is_loading);
         if self.is_loading {
-            if let Ok(_) = self.network_handler.next() {
-                self.ui.update_feeds();
-                self.is_loading = false;
+            if let Ok(event) = self.network_handler.next() {
+                match event {
+                    NetworkEvent::Complete => {
+                        self.ui.update_feeds();
+                        self.is_loading = false;
+                        self.ui.is_loading = false;
+
+                    },
+                    NetworkEvent::Updating(message) => {
+                        self.ui.loading_msg = message;
+                    }
+                    _ => {}
+                }
             }
         }
         self.ui.update();

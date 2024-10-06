@@ -1,4 +1,5 @@
 use crate::app::{Route, RouteId, ActiveBlock};
+use crate::network::NetworkEvent;
 use crate::prelude::Entry;
 use super::{components::*, UiCallback};
 use super::entries::Entries;
@@ -114,6 +115,18 @@ impl Ui {
             _ if key.code == KeyCode::Char('a') && key.modifiers == KeyModifiers::CONTROL => {
                 self.set_current_route(Route::new(RouteId::Home, ActiveBlock::AddFeed));
                 return None;
+            }
+            _ if key.code == KeyCode::Char('u') && key.modifiers == KeyModifiers::CONTROL => {
+                return Some(
+                    Box::new(
+                        move |app| {
+                            app.network_handler.dispatch(NetworkEvent::UpdateFeeds)?;
+                            app.is_loading = true;
+                            app.ui.is_loading = true;
+                            Ok(())
+                        }
+                    )
+                )
             }
             _ => {
                 let current_route = self.get_current_route().unwrap_or(&Route::default()).clone();

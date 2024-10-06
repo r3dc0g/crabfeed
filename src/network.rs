@@ -9,6 +9,7 @@ use crate::db::{self, find_feed_links, get_feeds, insert_feed, insert_link, dele
 
 pub enum NetworkEvent {
     Complete,
+    Updating(String),
     UpdateFeeds,
     AddFeed(String),
     DeleteFeed(i32),
@@ -31,7 +32,7 @@ impl NetworkHandler {
             tokio::spawn(
                 async move {
                     while let Ok(event) = receiver.recv() {
-                        if let Err(_) = NetworkHandler::handle_event(event).await {
+                        if let Err(_) = NetworkHandler::handle_event(event, sender.clone()).await {
                             // TODO: Log error
                         }
 
@@ -61,10 +62,10 @@ impl NetworkHandler {
     }
 
     // Handle Event
-    pub async fn handle_event(event: NetworkEvent) -> AppResult<()> {
+    pub async fn handle_event(event: NetworkEvent, sender: mpsc::Sender<NetworkEvent>) -> AppResult<()> {
         match event {
             NetworkEvent::UpdateFeeds => {
-                NetworkHandler::update_feeds().await?;
+                NetworkHandler::update_feeds(sender).await?;
             }
             NetworkEvent::AddFeed(url) => {
                 NetworkHandler::add_feed(url).await?;
@@ -79,12 +80,14 @@ impl NetworkHandler {
     }
 
     // Fetch feeds and update the app state
-    async fn update_feeds() -> AppResult<()> {
+    async fn update_feeds(sender: mpsc::Sender<NetworkEvent>) -> AppResult<()> {
         let feed_items = get_feeds()?;
 
         let mut new_feeds = vec![];
 
         for feed in feed_items.iter() {
+
+            sender.send(NetworkEvent::Updating(format!("Updating {}...", feed.title.clone().unwrap_or("Untitled Feed".to_string()))))?;
 
             let links = find_feed_links(feed.id)?;
 
