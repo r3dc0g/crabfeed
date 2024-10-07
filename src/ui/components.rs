@@ -46,6 +46,7 @@ impl BlockLabel {
 pub struct BlockText<'a> {
     title: Option<String>,
     paragraph: Paragraph<'a>,
+    stlye: Style,
     inner_margin: Option<Margin>,
 }
 
@@ -57,6 +58,11 @@ impl<'a> BlockText<'a> {
 
     pub fn paragraph(mut self, paragraph: Paragraph<'a>) -> Self {
         self.paragraph = paragraph;
+        self
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.stlye = style;
         self
     }
 
@@ -88,6 +94,7 @@ impl<'a> WidgetRef for BlockText<'a> {
                 .title(
                     self.title.clone().unwrap_or("".to_string())
                 )
+                .style(self.stlye)
                 .render(area, buf);
 
             Clear.render_ref(area.inner(margin), buf);

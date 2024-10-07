@@ -99,6 +99,11 @@ impl Ui {
     pub fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key {
             _ if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc => {
+
+                if self.get_current_route().unwrap_or(&Route::default()).id == RouteId::Entry {
+                    return self.entry.handle_key_event(key);
+                }
+
                 self.back();
                 if let None = self.get_current_route() {
                     return Some(Box::new(
