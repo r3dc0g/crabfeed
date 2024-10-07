@@ -183,18 +183,33 @@ impl Widget for &mut Ui {
         match current_route.id {
             RouteId::Home => {
 
-                let lists_section = Layout::new(
-                    Direction::Horizontal,
-                    [
-                        Constraint::Percentage(50),
-                        Constraint::Percentage(50),
-                    ]
-                )
-                .split(app_layout[1]);
+                if area.height > (area.width as f32 * 0.75) as u16 {
+                    match current_route.active_block {
+                        ActiveBlock::Feeds => {
+                            self.feeds.render(app_layout[1], buf);
+                        },
+                        ActiveBlock::Entries => {
+                            self.entries.render(app_layout[1], buf);
+                        },
+                        _ => {}
+                    }
 
-                self.feeds.render(lists_section[0], buf);
+                }
+                else {
+                    let lists_section = Layout::new(
+                        Direction::Horizontal,
+                        [
+                            Constraint::Percentage(50),
+                            Constraint::Percentage(50),
+                        ]
+                    )
+                    .split(app_layout[1]);
 
-                self.entries.render(lists_section[1], buf);
+                    self.feeds.render(lists_section[0], buf);
+
+                    self.entries.render(lists_section[1], buf);
+
+                }
 
                 match current_route.active_block {
                     ActiveBlock::AddFeed => {
@@ -202,6 +217,8 @@ impl Widget for &mut Ui {
                     }
                     _ => {}
                 }
+
+
 
             }
 

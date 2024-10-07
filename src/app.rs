@@ -6,6 +6,7 @@ use crate::ui::ui::Ui;
 use crate::AppResult;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
+use ratatui::layout::Rect;
 use ratatui::prelude::CrosstermBackend;
 use ratatui::Frame;
 use std::io;
@@ -76,7 +77,7 @@ impl App {
                     self.handle_mouse_event(mouse);
                 }
                 TerminalEvent::Resize(w, h) => {
-                    self.handle_resize_event(w, h);
+                    tui.resize(Rect::new(0, 0, w, h))?;
                 }
                 TerminalEvent::Tick { tick } => {
                     self.handle_tick_event(tick);
@@ -109,10 +110,6 @@ impl App {
     }
 
     pub fn handle_mouse_event(&mut self, event: MouseEvent) {
-
-    }
-
-    pub fn handle_resize_event(&mut self, w: u16, h: u16) {
 
     }
 

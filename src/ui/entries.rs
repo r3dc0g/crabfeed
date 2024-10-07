@@ -107,7 +107,7 @@ impl View for Entries {
                         self.list_state.select_first();
                     }
                 }
-                else {
+                else if self.entry_items.len() > 0 {
                     self.list_state.select_first();
                 }
 
@@ -122,7 +122,7 @@ impl View for Entries {
                         self.list_state.select(Some(self.entry_items.len() - 1));
                     }
                 }
-                else {
+                else if self.entry_items.len() > 0 {
                     self.list_state.select(Some(self.entry_items.len() - 1));
                 }
                 return None;
