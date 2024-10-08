@@ -1,10 +1,10 @@
-use chrono::NaiveDateTime;
-use feed_rs::model::Text;
-use chrono::{DateTime, Utc};
-use mime::Mime;
 use crate::error::Error;
-use diesel::prelude::*;
 use crate::schema::*;
+use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
+use diesel::prelude::*;
+use feed_rs::model::Text;
+use mime::Mime;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -81,7 +81,6 @@ impl FeedBuilder {
         self
     }
 
-
     pub fn published(&mut self, published: Option<DateTime<Utc>>) -> &mut Self {
         let Some(feed_pub) = published else {
             self.published = None;
@@ -154,7 +153,7 @@ impl EntryBuilder {
     pub fn title(&mut self, title: Option<Text>) -> &mut Self {
         let Some(entry_title) = title else {
             self.title = None;
-            return self
+            return self;
         };
 
         self.title = Some(entry_title.content);
@@ -257,7 +256,7 @@ impl MediaBuilder {
     pub fn title(&mut self, title: Option<Text>) -> &mut Self {
         let Some(media_title) = title else {
             self.title = None;
-            return self
+            return self;
         };
 
         self.title = Some(media_title.content);
@@ -272,7 +271,7 @@ impl MediaBuilder {
     pub fn description(&mut self, description: Option<Text>) -> &mut Self {
         let Some(media_description) = description else {
             self.title = None;
-            return self
+            return self;
         };
         self.description = Some(media_description.content);
         self
@@ -310,7 +309,6 @@ pub struct AuthorBuilder {
     name: String,
     uri: Option<String>,
     email: Option<String>,
-
 }
 
 impl AuthorBuilder {
@@ -456,7 +454,7 @@ pub struct Link {
     pub media_type: Option<String>,
     pub href_lang: Option<String>,
     pub title: Option<String>,
-    pub length: Option<i64>
+    pub length: Option<i64>,
 }
 
 #[derive(Insertable, Debug)]
@@ -477,7 +475,7 @@ pub struct LinkBuilder {
     media_type: Option<String>,
     href_lang: Option<String>,
     title: Option<String>,
-    length: Option<i64>
+    length: Option<i64>,
 }
 
 impl LinkBuilder {
@@ -521,34 +519,34 @@ impl LinkBuilder {
     }
 
     pub fn title(&mut self, title: Option<String>) -> &mut Self {
-       let Some(link_title) = title else {
-           self.title = None;
-           return self;
-       };
+        let Some(link_title) = title else {
+            self.title = None;
+            return self;
+        };
 
-       self.title = Some(link_title);
-       self
+        self.title = Some(link_title);
+        self
     }
 
     pub fn length(&mut self, length: Option<u64>) -> &mut Self {
-       let Some(link_length) = length else {
-           self.length = None;
-           return self;
-       };
+        let Some(link_length) = length else {
+            self.length = None;
+            return self;
+        };
 
-       self.length = Some(link_length as i64);
-       self
+        self.length = Some(link_length as i64);
+        self
     }
 
     pub fn build(&self) -> Result<NewLink> {
-       Ok(NewLink {
-           href: self.href.as_str(),
-           rel: self.rel.as_deref(),
-           media_type: self.media_type.as_deref(),
-           href_lang: self.href_lang.as_deref(),
-           title: self.title.as_deref(),
-           length: self.length.as_ref()
-       })
+        Ok(NewLink {
+            href: self.href.as_str(),
+            rel: self.rel.as_deref(),
+            media_type: self.media_type.as_deref(),
+            href_lang: self.href_lang.as_deref(),
+            title: self.title.as_deref(),
+            length: self.length.as_ref(),
+        })
     }
 }
 
@@ -578,7 +576,7 @@ pub struct FeedLinkBuilder {
 
 impl FeedLinkBuilder {
     pub fn new() -> Self {
-       FeedLinkBuilder::default()
+        FeedLinkBuilder::default()
     }
 
     pub fn link_id(&mut self, link_id: i32) -> &mut Self {
@@ -614,7 +612,7 @@ pub struct EntryLink {
 #[diesel(table_name = entry_link)]
 pub struct NewEntryLink<'a> {
     pub link_id: &'a i32,
-    pub entry_id: &'a i32
+    pub entry_id: &'a i32,
 }
 
 #[derive(Default)]
@@ -625,7 +623,7 @@ pub struct EntryLinkBuilder {
 
 impl EntryLinkBuilder {
     pub fn new() -> Self {
-       EntryLinkBuilder::default()
+        EntryLinkBuilder::default()
     }
 
     pub fn link_id(&mut self, link_id: i32) -> &mut Self {
@@ -673,22 +671,22 @@ pub struct CategoryBuilder {
 
 impl CategoryBuilder {
     pub fn new() -> Self {
-       CategoryBuilder::default()
+        CategoryBuilder::default()
     }
 
     pub fn term(&mut self, term: String) -> &mut Self {
-       self.term = term;
-       self
+        self.term = term;
+        self
     }
 
     pub fn scheme(&mut self, scheme: Option<String>) -> &mut Self {
-       let Some(category_scheme) = scheme else {
-           self.scheme = None;
-           return self;
-       };
+        let Some(category_scheme) = scheme else {
+            self.scheme = None;
+            return self;
+        };
 
-       self.scheme = Some(category_scheme);
-       self
+        self.scheme = Some(category_scheme);
+        self
     }
 
     pub fn label(&mut self, label: Option<String>) -> &mut Self {
@@ -702,11 +700,11 @@ impl CategoryBuilder {
     }
 
     pub fn build(&self) -> Result<NewCategory> {
-       Ok(NewCategory {
-           term: self.term.as_str(),
-           scheme: self.scheme.as_deref(),
-           label: self.label.as_deref(),
-       })
+        Ok(NewCategory {
+            term: self.term.as_str(),
+            scheme: self.scheme.as_deref(),
+            label: self.label.as_deref(),
+        })
     }
 }
 
@@ -736,7 +734,7 @@ pub struct FeedCategoryBuilder {
 
 impl FeedCategoryBuilder {
     pub fn new() -> Self {
-       FeedCategoryBuilder::default()
+        FeedCategoryBuilder::default()
     }
 
     pub fn category_id(&mut self, link_id: i32) -> &mut Self {
@@ -772,7 +770,7 @@ pub struct EntryCategory {
 #[diesel(table_name = entry_category)]
 pub struct NewEntryCategory<'a> {
     pub category_id: &'a i32,
-    pub entry_id: &'a i32
+    pub entry_id: &'a i32,
 }
 
 #[derive(Default)]
@@ -783,7 +781,7 @@ pub struct EntryCategoryBuilder {
 
 impl EntryCategoryBuilder {
     pub fn new() -> Self {
-       EntryCategoryBuilder::default()
+        EntryCategoryBuilder::default()
     }
 
     pub fn category_id(&mut self, link_id: i32) -> &mut Self {
@@ -834,23 +832,22 @@ pub struct ContentBuilder {
 
 impl ContentBuilder {
     pub fn new() -> Self {
-       ContentBuilder::default()
+        ContentBuilder::default()
     }
 
     pub fn body(&mut self, body: Option<String>) -> &mut Self {
-       let Some(content_body) = body else {
-           self.body = None;
-           return self;
-       };
+        let Some(content_body) = body else {
+            self.body = None;
+            return self;
+        };
 
-       self.body = Some(content_body);
-       self
+        self.body = Some(content_body);
+        self
     }
 
     pub fn content_type(&mut self, content_type: Mime) -> &mut Self {
-
-       self.content_type = Some(content_type.type_().to_string());
-       self
+        self.content_type = Some(content_type.type_().to_string());
+        self
     }
 
     pub fn length(&mut self, length: Option<u64>) -> &mut Self {
@@ -874,12 +871,12 @@ impl ContentBuilder {
     }
 
     pub fn build(&self) -> Result<NewContent> {
-       Ok(NewContent {
-           body: self.body.as_deref(),
-           content_type: self.content_type.as_deref(),
-           length: self.length.as_ref(),
-           src: self.src.as_ref(),
-       })
+        Ok(NewContent {
+            body: self.body.as_deref(),
+            content_type: self.content_type.as_deref(),
+            length: self.length.as_ref(),
+            src: self.src.as_ref(),
+        })
     }
 }
 
@@ -909,7 +906,7 @@ pub struct MediaLinkBuilder {
 
 impl MediaLinkBuilder {
     pub fn new() -> Self {
-       MediaLinkBuilder::default()
+        MediaLinkBuilder::default()
     }
 
     pub fn link_id(&mut self, link_id: i32) -> &mut Self {

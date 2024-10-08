@@ -1,16 +1,16 @@
-use crate::app::{Route, RouteId, ActiveBlock};
+use super::add::Add;
+use super::entries::Entries;
+use super::entry::Entry as EntryView;
+use super::feeds::Feeds;
+use super::View;
+use super::{components::*, UiCallback};
+use crate::app::{ActiveBlock, Route, RouteId};
 use crate::network::NetworkEvent;
 use crate::prelude::Entry;
-use super::{components::*, UiCallback};
-use super::entries::Entries;
-use super::feeds::Feeds;
-use super::entry::Entry as EntryView;
-use super::add::Add;
-use super::View;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use ratatui::prelude::*;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::prelude::*;
 
 pub struct Ui {
     navigation_stack: Vec<Route>,
@@ -20,12 +20,11 @@ pub struct Ui {
     feeds: Feeds,
     entries: Entries,
     entry: EntryView,
-    add_feed_popup: Add
+    add_feed_popup: Add,
 }
 
 impl Ui {
     pub fn new() -> Self {
-
         let mut feeds = Feeds::new();
         feeds.select(true);
         let entries = Entries::new(feeds.get_selected_feed().as_ref());
@@ -75,23 +74,24 @@ impl Ui {
     }
 
     pub fn update(&mut self) {
-        let current_route = self.get_current_route().unwrap_or(&Route::default()).clone();
+        let current_route = self
+            .get_current_route()
+            .unwrap_or(&Route::default())
+            .clone();
 
         self.feeds.select(false);
         self.entries.select(false);
 
         match current_route.id {
-            RouteId::Home => {
-                match current_route.active_block {
-                    ActiveBlock::Feeds => {
-                        self.feeds.select(true);
-                    },
-                    ActiveBlock::Entries => {
-                        self.entries.select(true);
-                    },
-                    _ => {}
+            RouteId::Home => match current_route.active_block {
+                ActiveBlock::Feeds => {
+                    self.feeds.select(true);
                 }
-            }
+                ActiveBlock::Entries => {
+                    self.entries.select(true);
+                }
+                _ => {}
+            },
             RouteId::Entry => {}
         }
     }
@@ -99,21 +99,17 @@ impl Ui {
     pub fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key {
             _ if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc => {
-
                 if self.get_current_route().unwrap_or(&Route::default()).id == RouteId::Entry {
                     return self.entry.handle_key_event(key);
                 }
 
                 self.back();
                 if let None = self.get_current_route() {
-                    return Some(Box::new(
-                        move |app| {
-                            app.is_running = false;
-                            Ok(())
-                        }
-                    ));
-                }
-                else {
+                    return Some(Box::new(move |app| {
+                        app.is_running = false;
+                        Ok(())
+                    }));
+                } else {
                     return None;
                 }
             }
@@ -122,39 +118,26 @@ impl Ui {
                 return None;
             }
             _ if key.code == KeyCode::Char('u') && key.modifiers == KeyModifiers::CONTROL => {
-                return Some(
-                    Box::new(
-                        move |app| {
-                            app.network_handler.dispatch(NetworkEvent::UpdateFeeds)?;
-                            app.is_loading = true;
-                            app.ui.is_loading = true;
-                            Ok(())
-                        }
-                    )
-                )
+                return Some(Box::new(move |app| {
+                    app.network_handler.dispatch(NetworkEvent::UpdateFeeds)?;
+                    app.is_loading = true;
+                    app.ui.is_loading = true;
+                    Ok(())
+                }))
             }
             _ => {
-                let current_route = self.get_current_route().unwrap_or(&Route::default()).clone();
+                let current_route = self
+                    .get_current_route()
+                    .unwrap_or(&Route::default())
+                    .clone();
                 match current_route.id {
-                    RouteId::Home => {
-                        match current_route.active_block {
-                            ActiveBlock::Feeds => {
-                                self.feeds.handle_key_event(key)
-                            }
-                            ActiveBlock::Entries => {
-                                self.entries.handle_key_event(key)
-                            }
-                            ActiveBlock::AddFeed => {
-                                self.add_feed_popup.handle_key_event(key)
-                            }
-                            _ => {
-                                None
-                            }
-                        }
-                    }
-                    RouteId::Entry => {
-                        self.entry.handle_key_event(key)
-                    }
+                    RouteId::Home => match current_route.active_block {
+                        ActiveBlock::Feeds => self.feeds.handle_key_event(key),
+                        ActiveBlock::Entries => self.entries.handle_key_event(key),
+                        ActiveBlock::AddFeed => self.add_feed_popup.handle_key_event(key),
+                        _ => None,
+                    },
+                    RouteId::Entry => self.entry.handle_key_event(key),
                 }
             }
         }
@@ -163,14 +146,13 @@ impl Ui {
 
 impl Widget for &mut Ui {
     fn render(self, area: Rect, buf: &mut Buffer) {
-
         let app_layout = Layout::new(
             Direction::Vertical,
             [
                 Constraint::Length(3),
                 Constraint::Max(100),
                 Constraint::Length(3),
-            ]
+            ],
         )
         .split(area);
 
@@ -178,37 +160,33 @@ impl Widget for &mut Ui {
             .label("Crabfeed".to_string())
             .render(app_layout[0], buf);
 
-        let current_route = self.get_current_route().unwrap_or(&Route::default()).clone();
+        let current_route = self
+            .get_current_route()
+            .unwrap_or(&Route::default())
+            .clone();
 
         match current_route.id {
             RouteId::Home => {
-
                 if area.height > (area.width as f32 * 0.75) as u16 {
                     match current_route.active_block {
                         ActiveBlock::Feeds => {
                             self.feeds.render(app_layout[1], buf);
-                        },
+                        }
                         ActiveBlock::Entries => {
                             self.entries.render(app_layout[1], buf);
-                        },
+                        }
                         _ => {}
                     }
-
-                }
-                else {
+                } else {
                     let lists_section = Layout::new(
                         Direction::Horizontal,
-                        [
-                            Constraint::Percentage(50),
-                            Constraint::Percentage(50),
-                        ]
+                        [Constraint::Percentage(50), Constraint::Percentage(50)],
                     )
                     .split(app_layout[1]);
 
                     self.feeds.render(lists_section[0], buf);
 
                     self.entries.render(lists_section[1], buf);
-
                 }
 
                 match current_route.active_block {
@@ -217,9 +195,6 @@ impl Widget for &mut Ui {
                     }
                     _ => {}
                 }
-
-
-
             }
 
             RouteId::Entry => {

@@ -1,13 +1,13 @@
-mod db;
-mod schema;
-mod prelude;
-mod error;
-mod ui;
-mod tui;
 mod app;
-mod network;
+mod db;
+mod error;
 mod event;
+mod network;
+mod prelude;
+mod schema;
 mod time;
+mod tui;
+mod ui;
 
 use error::Error;
 
@@ -17,9 +17,7 @@ pub(crate) type AppResult<T> = core::result::Result<T, Error>;
 
 #[tokio::main]
 async fn main() -> AppResult<()> {
-
     App::new().run()?;
 
     Ok(())
 }
-

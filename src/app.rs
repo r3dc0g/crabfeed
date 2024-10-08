@@ -18,7 +18,6 @@ pub enum RouteId {
     Entry,
 }
 
-
 #[derive(Debug, Default, Clone, PartialEq)]
 pub enum ActiveBlock {
     #[default]
@@ -27,7 +26,6 @@ pub enum ActiveBlock {
     Entry,
     AddFeed,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Route {
@@ -49,7 +47,6 @@ pub struct App {
 }
 
 impl App {
-
     pub fn new() -> Self {
         App {
             is_running: true,
@@ -60,7 +57,6 @@ impl App {
     }
 
     pub fn run(&mut self) -> AppResult<()> {
-
         let backend = CrosstermBackend::new(io::stdout());
         let event_handler = EventHandler::new();
         let mut tui = Tui::new(backend, event_handler)?;
@@ -68,7 +64,9 @@ impl App {
         while self.is_running {
             match tui.event_handler.next()? {
                 TerminalEvent::Key(key) => {
-                    if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+                    if key.modifiers.contains(KeyModifiers::CONTROL)
+                        && key.code == KeyCode::Char('c')
+                    {
                         self.is_running = false;
                     }
                     self.handle_key_event(key);
@@ -99,7 +97,7 @@ impl App {
             _ => {
                 if let Some(callback) = self.ui.handle_key_event(key) {
                     match (callback)(self) {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(_) => {
                             self.is_running = false;
                         }
@@ -109,9 +107,7 @@ impl App {
         }
     }
 
-    pub fn handle_mouse_event(&mut self, event: MouseEvent) {
-
-    }
+    pub fn handle_mouse_event(&mut self, event: MouseEvent) {}
 
     pub fn handle_tick_event(&mut self, _tick: Tick) {
         assert_eq!(self.ui.is_loading, self.is_loading);
@@ -122,8 +118,7 @@ impl App {
                         self.ui.update_feeds();
                         self.is_loading = false;
                         self.ui.is_loading = false;
-
-                    },
+                    }
                     NetworkEvent::Updating(message) => {
                         self.ui.loading_msg = message;
                     }
@@ -133,5 +128,4 @@ impl App {
         }
         self.ui.update();
     }
-
 }

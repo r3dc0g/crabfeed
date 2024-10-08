@@ -18,11 +18,12 @@ impl SystemTimeTick for Tick {
             .duration_since(SystemTime::UNIX_EPOCH)
             .expect("Time went backwards")
             .as_millis()
-
     }
 
     fn from_system_time(time: SystemTime) -> Self {
-        time.duration_since(SystemTime::UNIX_EPOCH).expect("Time went backwards").as_millis()
+        time.duration_since(SystemTime::UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_millis()
     }
 
     fn as_system_time(&self) -> SystemTime {

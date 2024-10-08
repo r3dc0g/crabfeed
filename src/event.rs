@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::time::{Tick, TIME_STEP, TIME_STEP_MILLIS, SystemTimeTick};
+use crate::time::{SystemTimeTick, Tick, TIME_STEP, TIME_STEP_MILLIS};
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, KeyEventKind, MouseEvent};
 use std::{sync::mpsc, thread};
 
@@ -19,7 +19,6 @@ pub struct EventHandler {
 }
 
 impl EventHandler {
-
     pub fn new() -> Self {
         let (sender, receiver) = mpsc::channel();
         let event_handler = {
@@ -31,16 +30,13 @@ impl EventHandler {
                         CrosstermEvent::Key(key) => {
                             if key.kind == KeyEventKind::Press {
                                 sender.send(TerminalEvent::Key(key))
-                            }
-                            else {
+                            } else {
                                 Ok(())
                             }
-                        },
+                        }
                         CrosstermEvent::Mouse(e) => sender.send(TerminalEvent::Mouse(e)),
                         CrosstermEvent::Resize(w, h) => sender.send(TerminalEvent::Resize(w, h)),
-                        _ => {
-                            Ok(())
-                        }
+                        _ => Ok(()),
                     }
                     .expect("unable to send event");
                 }

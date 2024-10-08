@@ -2,8 +2,8 @@ use ratatui::prelude::*;
 use ratatui::widgets::*;
 use ratatui::{
     layout::Rect,
+    style::{Color, Style},
     widgets::{Block, Borders, List, ListState, Paragraph},
-    style::{Style, Color}
 };
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
@@ -12,13 +12,10 @@ pub struct BlockLabel {
 }
 
 impl WidgetRef for BlockLabel {
-    fn render_ref(&self,area:Rect,buf: &mut Buffer) {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         Paragraph::new(self.label.clone())
             .alignment(Alignment::Center)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-            )
+            .block(Block::default().borders(Borders::ALL))
             .render(area, buf);
     }
 }
@@ -70,13 +67,10 @@ impl<'a> BlockText<'a> {
         self.inner_margin = Some(margin);
         self
     }
-
 }
 
 impl<'a> WidgetRef for BlockText<'a> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-
-
         // let width = area.width;
         // let height = area.height;
 
@@ -88,27 +82,21 @@ impl<'a> WidgetRef for BlockText<'a> {
         //         )
         //     ), buf);
         if let Some(margin) = self.inner_margin {
-
             Block::default()
                 .borders(Borders::ALL)
-                .title(
-                    self.title.clone().unwrap_or("".to_string())
-                )
+                .title(self.title.clone().unwrap_or("".to_string()))
                 .style(self.stlye)
                 .render(area, buf);
 
             Clear.render_ref(area.inner(margin), buf);
-            self.paragraph.clone()
-                .render(area.inner(margin), buf);
-        }
-        else {
-            self.paragraph.clone()
+            self.paragraph.clone().render(area.inner(margin), buf);
+        } else {
+            self.paragraph
+                .clone()
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
-                        .title(
-                            self.title.clone().unwrap_or("".to_string())
-                        )
+                        .title(self.title.clone().unwrap_or("".to_string())),
                 )
                 .render(area, buf);
         }
@@ -125,8 +113,8 @@ impl<'a> Widget for BlockText<'a> {
 pub struct ItemList<'a, T>
 where
     T: IntoIterator + Clone,
-    T::Item: Into<ListItem<'a>>, {
-
+    T::Item: Into<ListItem<'a>>,
+{
     title: Option<String>,
     items: &'a T,
     style: Style,
@@ -135,25 +123,23 @@ where
 impl<'a, T> StatefulWidgetRef for ItemList<'a, T>
 where
     T: IntoIterator + Clone,
-    T::Item: Into<ListItem<'a>>, {
+    T::Item: Into<ListItem<'a>>,
+{
     type State = ListState;
 
-    fn render_ref(&self,area:Rect,buf: &mut Buffer,state: &mut Self::State) {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         StatefulWidget::render(
             List::new(self.items.clone())
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
                         .title(self.title.clone().unwrap_or("".to_string()))
-                        .border_style(self.style)
+                        .border_style(self.style),
                 )
-                .highlight_style(
-                    Style::default()
-                        .bg(Color::DarkGray)
-                ),
+                .highlight_style(Style::default().bg(Color::DarkGray)),
             area,
             buf,
-            state
+            state,
         );
     }
 }
@@ -161,7 +147,8 @@ where
 impl<'a, T> StatefulWidget for ItemList<'a, T>
 where
     T: IntoIterator + Clone,
-    T::Item: Into<ListItem<'a>>, {
+    T::Item: Into<ListItem<'a>>,
+{
     type State = ListState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
@@ -172,7 +159,8 @@ where
 impl<'a, T> ItemList<'a, T>
 where
     T: IntoIterator + Clone,
-    T::Item: Into<ListItem<'a>>, {
+    T::Item: Into<ListItem<'a>>,
+{
     pub fn new(items: &'a T) -> Self {
         Self {
             title: None,
@@ -194,7 +182,8 @@ where
 
 pub struct Popup<W>
 where
-    W: WidgetRef {
+    W: WidgetRef,
+{
     height: u16,
     width: u16,
     inner_widget: Option<W>,
@@ -202,7 +191,8 @@ where
 
 impl<W> Popup<W>
 where
-    W: WidgetRef {
+    W: WidgetRef,
+{
     pub fn new(inner_widget: Option<W>) -> Self {
         Self {
             height: 0,
@@ -222,10 +212,10 @@ where
     }
 }
 
-
 impl<W> Default for Popup<W>
 where
-    W: WidgetRef {
+    W: WidgetRef,
+{
     fn default() -> Self {
         Self {
             height: 0,
@@ -237,9 +227,9 @@ where
 
 impl<W> WidgetRef for Popup<W>
 where
-    W: WidgetRef {
-    fn render_ref(&self,area:Rect,buf: &mut Buffer) {
-
+    W: WidgetRef,
+{
+    fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         let new_area = Rect::new(
             area.x + area.width / 2 - self.width / 2,
             area.y + area.height / 2 - self.height / 2,
@@ -249,15 +239,14 @@ where
 
         Clear.render_ref(new_area, buf);
         self.inner_widget.render_ref(new_area, buf);
-
     }
 }
 
 impl<W> Widget for Popup<W>
 where
-    W: WidgetRef {
+    W: WidgetRef,
+{
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.render_ref(area, buf);
     }
 }
-
