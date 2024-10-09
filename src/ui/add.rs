@@ -61,12 +61,10 @@ impl View for Add {
     fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key.code {
             _ if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc => {
-                Some(
-                    Box::new(move |app| {
-                        app.ui.unset_popup();
-                        Ok(())
-                    })
-                )
+                Some(Box::new(move |app| {
+                    app.ui.unset_popup();
+                    Ok(())
+                }))
             }
             _ if key.code == KeyCode::Char('v') && key.modifiers == KeyModifiers::CONTROL => {
                 let mut clipboard: ClipboardContext = ClipboardProvider::new().unwrap();

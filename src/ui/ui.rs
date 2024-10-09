@@ -102,7 +102,6 @@ impl Ui {
     pub fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key {
             _ if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc => {
-
                 if let Some(popup) = &mut self.popup {
                     return popup.handle_key_event(key);
                 }
