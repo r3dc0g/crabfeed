@@ -1,9 +1,7 @@
-use crate::error::Error;
 use crate::time::{SystemTimeTick, Tick, TIME_STEP, TIME_STEP_MILLIS};
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, KeyEventKind, MouseEvent};
 use std::{sync::mpsc, thread};
-
-pub type Result<T> = core::result::Result<T, Error>;
+use crate::AppResult;
 
 pub enum TerminalEvent {
     Key(KeyEvent),
@@ -58,7 +56,7 @@ impl EventHandler {
         }
     }
 
-    pub fn next(&self) -> Result<TerminalEvent> {
+    pub fn next(&self) -> AppResult<TerminalEvent> {
         Ok(self.receiver.recv()?)
     }
 }

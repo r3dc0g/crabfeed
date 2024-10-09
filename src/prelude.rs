@@ -1,12 +1,10 @@
-use crate::error::Error;
 use crate::schema::*;
 use chrono::NaiveDateTime;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use feed_rs::model::Text;
 use mime::Mime;
-
-pub type Result<T> = core::result::Result<T, Error>;
+use crate::AppResult;
 
 #[derive(Clone, Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = feed)]
@@ -90,7 +88,7 @@ impl FeedBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewFeed> {
+    pub fn build(&self) -> AppResult<NewFeed> {
         Ok(NewFeed {
             title: self.title.as_deref(),
             updated: self.updated.as_ref(),
@@ -210,7 +208,7 @@ impl EntryBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewEntry> {
+    pub fn build(&self) -> AppResult<NewEntry> {
         Ok(NewEntry {
             feed_id: &self.feed_id,
             title: self.title.as_deref(),
@@ -277,7 +275,7 @@ impl MediaBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewMedia> {
+    pub fn build(&self) -> AppResult<NewMedia> {
         Ok(NewMedia {
             title: self.title.as_deref(),
             thumbnail: self.thumbnail.as_deref(),
@@ -341,7 +339,7 @@ impl AuthorBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewAuthor> {
+    pub fn build(&self) -> AppResult<NewAuthor> {
         Ok(NewAuthor {
             name: self.name.as_str(),
             uri: self.uri.as_deref(),
@@ -389,7 +387,7 @@ impl FeedAuthorBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewFeedAuthor> {
+    pub fn build(&self) -> AppResult<NewFeedAuthor> {
         Ok(NewFeedAuthor {
             author_id: &self.author_id,
             feed_id: &self.feed_id,
@@ -436,7 +434,7 @@ impl EntryAuthorBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewEntryAuthor> {
+    pub fn build(&self) -> AppResult<NewEntryAuthor> {
         Ok(NewEntryAuthor {
             author_id: &self.author_id,
             entry_id: &self.entry_id,
@@ -538,7 +536,7 @@ impl LinkBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewLink> {
+    pub fn build(&self) -> AppResult<NewLink> {
         Ok(NewLink {
             href: self.href.as_str(),
             rel: self.rel.as_deref(),
@@ -589,7 +587,7 @@ impl FeedLinkBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewFeedLink> {
+    pub fn build(&self) -> AppResult<NewFeedLink> {
         Ok(NewFeedLink {
             link_id: &self.link_id,
             feed_id: &self.feed_id,
@@ -636,7 +634,7 @@ impl EntryLinkBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewEntryLink> {
+    pub fn build(&self) -> AppResult<NewEntryLink> {
         Ok(NewEntryLink {
             link_id: &self.link_id,
             entry_id: &self.entry_id,
@@ -699,7 +697,7 @@ impl CategoryBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewCategory> {
+    pub fn build(&self) -> AppResult<NewCategory> {
         Ok(NewCategory {
             term: self.term.as_str(),
             scheme: self.scheme.as_deref(),
@@ -747,7 +745,7 @@ impl FeedCategoryBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewFeedCategory> {
+    pub fn build(&self) -> AppResult<NewFeedCategory> {
         Ok(NewFeedCategory {
             category_id: &self.category_id,
             feed_id: &self.feed_id,
@@ -794,7 +792,7 @@ impl EntryCategoryBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewEntryCategory> {
+    pub fn build(&self) -> AppResult<NewEntryCategory> {
         Ok(NewEntryCategory {
             category_id: &self.category_id,
             entry_id: &self.entry_id,
@@ -870,7 +868,7 @@ impl ContentBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewContent> {
+    pub fn build(&self) -> AppResult<NewContent> {
         Ok(NewContent {
             body: self.body.as_deref(),
             content_type: self.content_type.as_deref(),
@@ -919,7 +917,7 @@ impl MediaLinkBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<NewMediaLink> {
+    pub fn build(&self) -> AppResult<NewMediaLink> {
         Ok(NewMediaLink {
             link_id: &self.link_id,
             media_id: &self.media_id,

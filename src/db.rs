@@ -9,10 +9,9 @@ use html_parser::{Dom, Node};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
+use crate::AppResult;
 
-pub type Result<T> = core::result::Result<T, Error>;
-
-fn setup_database(conn: &mut SqliteConnection) -> Result<()> {
+fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
     sql_query(
         "CREATE TABLE feed ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
@@ -178,7 +177,7 @@ fn setup_database(conn: &mut SqliteConnection) -> Result<()> {
     Ok(())
 }
 
-pub fn connect() -> Result<SqliteConnection> {
+pub fn connect() -> AppResult<SqliteConnection> {
     if cfg!(unix) {
         let mut first_creation = false;
         let home = env::var("HOME").unwrap();
@@ -202,7 +201,7 @@ pub fn connect() -> Result<SqliteConnection> {
     Err(Error::Static("Unsupported OS"))
 }
 
-pub fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> Result<i32> {
+pub fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppResult<i32> {
     let mut builder = FeedBuilder::new();
 
     let new_feed = builder
@@ -236,7 +235,7 @@ pub fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> Result<i32
     }
 }
 
-pub fn get_feeds() -> Result<Vec<Feed>> {
+pub fn get_feeds() -> AppResult<Vec<Feed>> {
     use crate::schema::feed::dsl::*;
 
     let conn = &mut connect()?;
@@ -246,7 +245,7 @@ pub fn get_feeds() -> Result<Vec<Feed>> {
     Ok(results)
 }
 
-pub fn select_feed(feed_id: &i32) -> Result<Feed> {
+pub fn select_feed(feed_id: &i32) -> AppResult<Feed> {
     let conn = &mut connect()?;
 
     let result = feed::table
@@ -257,7 +256,7 @@ pub fn select_feed(feed_id: &i32) -> Result<Feed> {
     Ok(result)
 }
 
-pub fn select_entry(entry_id: &i32) -> Result<Entry> {
+pub fn select_entry(entry_id: &i32) -> AppResult<Entry> {
     let conn = &mut connect()?;
 
     let result = entry::table
@@ -268,7 +267,7 @@ pub fn select_entry(entry_id: &i32) -> Result<Entry> {
     Ok(result)
 }
 
-pub fn select_content(content_id: &i32) -> Result<Content> {
+pub fn select_content(content_id: &i32) -> AppResult<Content> {
     let conn = &mut connect()?;
 
     let result = content::table
@@ -279,7 +278,7 @@ pub fn select_content(content_id: &i32) -> Result<Content> {
     Ok(result)
 }
 
-pub fn find_feed_links(feed_id: i32) -> Result<Vec<Link>> {
+pub fn find_feed_links(feed_id: i32) -> AppResult<Vec<Link>> {
     let conn = &mut connect()?;
 
     let result = feed::table
@@ -291,7 +290,7 @@ pub fn find_feed_links(feed_id: i32) -> Result<Vec<Link>> {
     Ok(result)
 }
 
-pub fn find_feed_authors(feed_id: i32) -> Result<Vec<Author>> {
+pub fn find_feed_authors(feed_id: i32) -> AppResult<Vec<Author>> {
     let conn = &mut connect()?;
 
     let result = feed::table
@@ -303,7 +302,7 @@ pub fn find_feed_authors(feed_id: i32) -> Result<Vec<Author>> {
     Ok(result)
 }
 
-pub fn find_feed_categories(feed_id: i32) -> Result<Vec<Category>> {
+pub fn find_feed_categories(feed_id: i32) -> AppResult<Vec<Category>> {
     let conn = &mut connect()?;
 
     let result = feed::table
@@ -315,7 +314,7 @@ pub fn find_feed_categories(feed_id: i32) -> Result<Vec<Category>> {
     Ok(result)
 }
 
-pub fn find_entry_links(entry_id: i32) -> Result<Vec<Link>> {
+pub fn find_entry_links(entry_id: i32) -> AppResult<Vec<Link>> {
     let conn = &mut connect()?;
 
     let result = entry::table
@@ -327,7 +326,7 @@ pub fn find_entry_links(entry_id: i32) -> Result<Vec<Link>> {
     Ok(result)
 }
 
-pub fn find_entry_authors(entry_id: i32) -> Result<Vec<Author>> {
+pub fn find_entry_authors(entry_id: i32) -> AppResult<Vec<Author>> {
     let conn = &mut connect()?;
 
     let result = entry::table
@@ -339,7 +338,7 @@ pub fn find_entry_authors(entry_id: i32) -> Result<Vec<Author>> {
     Ok(result)
 }
 
-pub fn find_entry_categories(entry_id: i32) -> Result<Vec<Category>> {
+pub fn find_entry_categories(entry_id: i32) -> AppResult<Vec<Category>> {
     let conn = &mut connect()?;
 
     let result = entry::table
@@ -351,7 +350,7 @@ pub fn find_entry_categories(entry_id: i32) -> Result<Vec<Category>> {
     Ok(result)
 }
 
-pub fn find_media_links(media_id: i32) -> Result<Vec<Link>> {
+pub fn find_media_links(media_id: i32) -> AppResult<Vec<Link>> {
     let conn = &mut connect()?;
 
     let result = media::table
@@ -363,7 +362,7 @@ pub fn find_media_links(media_id: i32) -> Result<Vec<Link>> {
     Ok(result)
 }
 
-pub fn get_entries(curr_feed: &Feed) -> Result<Vec<Entry>> {
+pub fn get_entries(curr_feed: &Feed) -> AppResult<Vec<Entry>> {
     let conn = &mut connect()?;
 
     let feed_id = feed::table
@@ -378,7 +377,7 @@ pub fn get_entries(curr_feed: &Feed) -> Result<Vec<Entry>> {
     Ok(entries)
 }
 
-pub fn select_entries(feed_id: i32) -> Result<Vec<Entry>> {
+pub fn select_entries(feed_id: i32) -> AppResult<Vec<Entry>> {
     let conn = &mut connect()?;
 
     let entries = entry::table
@@ -389,7 +388,7 @@ pub fn select_entries(feed_id: i32) -> Result<Vec<Entry>> {
     Ok(entries)
 }
 
-pub fn mark_entry_read(entry_id: i32) -> Result<()> {
+pub fn mark_entry_read(entry_id: i32) -> AppResult<()> {
     let conn = &mut connect()?;
 
     diesel::update(entry::table.filter(entry::id.eq(entry_id)))
@@ -403,7 +402,7 @@ fn insert_entries(
     conn: &mut SqliteConnection,
     entries: Vec<model::Entry>,
     feed_id: i32,
-) -> Result<()> {
+) -> AppResult<()> {
     let mut builder = EntryBuilder::new();
 
     for entry in entries.iter().rev() {
@@ -448,7 +447,7 @@ fn insert_authors(
     authors: Vec<model::Person>,
     feed_id: Option<i32>,
     entry_id: Option<i32>,
-) -> Result<()> {
+) -> AppResult<()> {
     let mut builder = AuthorBuilder::new();
 
     for person in authors {
@@ -496,7 +495,7 @@ pub fn insert_links(
     links: Vec<model::Link>,
     feed_id: Option<i32>,
     entry_id: Option<i32>,
-) -> Result<()> {
+) -> AppResult<()> {
     let mut builder = LinkBuilder::new();
 
     for link in links {
@@ -557,7 +556,7 @@ pub fn insert_link(
     link: String,
     feed_id: Option<i32>,
     entry_id: Option<i32>,
-) -> Result<()> {
+) -> AppResult<()> {
     let mut builder = LinkBuilder::new();
 
     let new_link = builder
@@ -600,7 +599,7 @@ fn insert_categories(
     categories: Vec<model::Category>,
     feed_id: Option<i32>,
     entry_id: Option<i32>,
-) -> Result<()> {
+) -> AppResult<()> {
     let mut builder = CategoryBuilder::new();
 
     for category in categories {
@@ -652,7 +651,7 @@ fn insert_categories(
 fn insert_content(
     conn: &mut SqliteConnection,
     content_opt: Option<model::Content>,
-) -> Result<Option<i32>> {
+) -> AppResult<Option<i32>> {
     let Some(content) = content_opt else {
         return Ok(None);
     };
@@ -710,7 +709,7 @@ fn insert_content(
 pub fn insert_media(
     conn: &mut SqliteConnection,
     media: Option<model::MediaObject>,
-) -> Result<Option<i32>> {
+) -> AppResult<Option<i32>> {
     let Some(media) = media else {
         return Ok(None);
     };
@@ -770,7 +769,7 @@ pub fn insert_media(
     return Ok(Some(ret_media.id));
 }
 
-pub fn select_media(media_id: &i32) -> Result<Media> {
+pub fn select_media(media_id: &i32) -> AppResult<Media> {
     let conn = &mut connect()?;
 
     let result = media::table
@@ -781,7 +780,7 @@ pub fn select_media(media_id: &i32) -> Result<Media> {
     Ok(result)
 }
 
-pub fn delete_feed(feed_id: i32) -> Result<()> {
+pub fn delete_feed(feed_id: i32) -> AppResult<()> {
     // Get all the entries for the feed
     // delete each entry's link, content and author
     // delete the entries, author, link, and category of the feed
@@ -827,7 +826,7 @@ pub fn delete_feed(feed_id: i32) -> Result<()> {
     Ok(())
 }
 
-pub fn delete_entry(entry_id: i32) -> Result<()> {
+pub fn delete_entry(entry_id: i32) -> AppResult<()> {
     // Get the entry
     // delete the entry's link, content and author
     // delete the entry
