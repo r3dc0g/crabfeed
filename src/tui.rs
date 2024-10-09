@@ -1,10 +1,12 @@
 use std::{io, panic};
 
-use crossterm::{event::{DisableMouseCapture, EnableMouseCapture}, terminal::{self, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen}};
+use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture},
+    terminal::{self, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
 use ratatui::{layout::Rect, prelude::Backend, Terminal};
 
 use crate::{app::App, event::EventHandler, ui::ui::Ui, AppResult};
-
 
 pub struct Tui<B: Backend> {
     terminal: Terminal<B>,
@@ -39,8 +41,7 @@ impl<B: Backend> Tui<B> {
     }
 
     pub fn draw(&mut self, ui: &mut Ui) -> AppResult<()> {
-        self.terminal
-            .draw(|f| App::render(ui, f))?;
+        self.terminal.draw(|f| App::render(ui, f))?;
         Ok(())
     }
 

@@ -1,19 +1,15 @@
 // Takes in RAW HTML and returns a representation as a list of ratatui widgets
 
-use crate::error::Error;
-use ratatui::{style::*, text::*, widgets::*};
-use html_parser::{Dom, Node};
 use crate::AppResult;
-
+use html_parser::{Dom, Node};
+use ratatui::{style::*, text::*, widgets::*};
 
 fn remove_bad_chars(text: &str) -> String {
     text.replace("&nbsp;", "").replace("&#8217;", "'")
 }
 
 fn handle_style(node: Node) -> Vec<Span<'static>> {
-
     if let Some(element) = node.element() {
-
         if element.children.is_empty() {
             return vec![];
         }
@@ -28,8 +24,7 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                         }
                     }
                     return spans;
-                }
-                else {
+                } else {
                     if element.children[0].element().is_some() {
                         let mut spans = vec![];
                         for span in handle_style(element.children[0].clone()) {
@@ -37,12 +32,10 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                         }
                         return spans;
                     }
-                    return vec![
-                        Span::styled(
-                            element.children[0].text().unwrap().to_string(),
-                            Style::default().add_modifier(Modifier::BOLD)
-                        )
-                    ];
+                    return vec![Span::styled(
+                        element.children[0].text().unwrap().to_string(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    )];
                 }
             }
 
@@ -55,8 +48,7 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                         }
                     }
                     return spans;
-                }
-                else {
+                } else {
                     if element.children[0].element().is_some() {
                         let mut spans = vec![];
                         for span in handle_style(element.children[0].clone()) {
@@ -64,12 +56,10 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                         }
                         return spans;
                     }
-                    return vec![
-                        Span::styled(
-                            element.children[0].text().unwrap().to_string(),
-                            Style::default().add_modifier(Modifier::ITALIC)
-                        )
-                    ];
+                    return vec![Span::styled(
+                        element.children[0].text().unwrap().to_string(),
+                        Style::default().add_modifier(Modifier::ITALIC),
+                    )];
                 }
             }
 
@@ -82,20 +72,17 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                         }
                     }
                     return spans;
-                }
-                else {
+                } else {
                     if element.children[0].element().is_some() {
                         let mut spans = vec![];
                         for span in handle_style(element.children[0].clone()) {
                             spans.push(span.add_modifier(Modifier::CROSSED_OUT));
                         }
                     }
-                    return vec![
-                        Span::styled(
-                            element.children[0].text().unwrap().to_string(),
-                            Style::default().add_modifier(Modifier::CROSSED_OUT)
-                        )
-                    ];
+                    return vec![Span::styled(
+                        element.children[0].text().unwrap().to_string(),
+                        Style::default().add_modifier(Modifier::CROSSED_OUT),
+                    )];
                 }
             }
 
@@ -108,8 +95,7 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                         }
                     }
                     return spans;
-                }
-                else if element.children.len() == 1 {
+                } else if element.children.len() == 1 {
                     if element.children[0].element().is_some() {
                         let mut spans = vec![];
                         for span in handle_style(element.children[0].clone()) {
@@ -119,14 +105,11 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                         return spans;
                     }
 
-                    return vec![
-                        Span::styled(
-                            element.children[0].text().unwrap().to_string(),
-                            Style::default().add_modifier(Modifier::UNDERLINED)
-                        )
-                    ];
-                }
-                else {
+                    return vec![Span::styled(
+                        element.children[0].text().unwrap().to_string(),
+                        Style::default().add_modifier(Modifier::UNDERLINED),
+                    )];
+                } else {
                     return vec![];
                 }
             }
@@ -135,25 +118,20 @@ fn handle_style(node: Node) -> Vec<Span<'static>> {
                 return vec![];
             }
         }
-
-    }
-    else {
+    } else {
         if let Some(text) = node.text() {
-
             return vec![Span::raw(remove_bad_chars(text))];
-        }
-        else {
+        } else {
             return vec![];
         }
     }
 }
 
 fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
-
     let mut elements = Vec::new();
 
     if children.is_empty() {
-        return vec![]
+        return vec![];
     }
 
     for child in children.iter() {
@@ -166,9 +144,7 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
                             spans.push(span);
                         }
                     }
-                    elements.push(
-                            Line::from(spans)
-                    );
+                    elements.push(Line::from(spans));
                 }
 
                 "h1" | "h2" | "h3" | "h4" | "h5" => {
@@ -178,9 +154,7 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
                             spans.push(span.add_modifier(Modifier::BOLD));
                         }
                     }
-                    elements.push(
-                        Line::from(spans)
-                    );
+                    elements.push(Line::from(spans));
                 }
 
                 "ul" => {
@@ -194,18 +168,14 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
                                         spans.push(span);
                                     }
                                 }
-                                elements.push(
-                                    Line::from(spans)
-                                );
+                                elements.push(Line::from(spans));
                             }
                         }
                     }
                 }
 
                 "br" => {
-                    elements.push(
-                        Line::from(Span::raw("\n"))
-                    );
+                    elements.push(Line::from(Span::raw("\n")));
                 }
 
                 "b" | "strong" | "i" | "em" | "s" | "strike" | "a" | "u" => {
@@ -215,19 +185,14 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
                             spans.push(span);
                         }
                     }
-                    elements.push(
-                        Line::from(spans)
-                    );
+                    elements.push(Line::from(spans));
                 }
 
                 _ => {}
             }
-        }
-        else {
+        } else {
             if let Some(text) = child.text() {
-                elements.push(
-                    Line::from(Span::raw(text.to_string()))
-                );
+                elements.push(Line::from(Span::raw(text.to_string())));
             }
         }
 
@@ -238,7 +203,6 @@ fn handle_children(children: Vec<Node>) -> Vec<Line<'static>> {
 }
 
 pub fn parse_html<'a>(html: String) -> AppResult<Paragraph<'a>> {
-
     let dom = Dom::parse(&html)?;
     let children = dom.children;
 
@@ -253,7 +217,6 @@ pub fn parse_html<'a>(html: String) -> AppResult<Paragraph<'a>> {
 
 #[test]
 fn parse_html_test() {
-
     let html = r#"
                 <p>Analysing MQTT data, getting domains unblocked from Cloudflare DNS, making ASCII animations, and why Joe is drawn to Linux Mint. Plus why we don&#8217;t talk about Vivaldi even though it&#8217;s quite good, why Félim was wrong about right click in PuTTY, and Will doesn&#8217;t seem to understand Lemmy.</p>
 <p>&nbsp;</p>

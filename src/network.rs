@@ -1,11 +1,11 @@
-use crate::{time::TIME_STEP, AppResult};
 use crate::error::Error;
+use crate::{time::TIME_STEP, AppResult};
 use std::sync::mpsc;
 
+use crate::db::{self, delete_feed, find_feed_links, get_feeds, insert_feed, insert_link};
 use feed_rs::parser;
 use reqwest;
 use tokio::task::JoinHandle;
-use crate::db::{self, find_feed_links, get_feeds, insert_feed, insert_link, delete_feed};
 
 pub enum NetworkEvent {
     Complete,
@@ -23,25 +23,22 @@ pub struct NetworkHandler {
 
 impl NetworkHandler {
     pub fn new() -> Self {
-
         let (sender, receiver) = mpsc::channel();
         let (sender2, receiver2) = mpsc::channel();
 
         let handler = {
             let sender = sender2.clone();
-            tokio::spawn(
-                async move {
-                    while let Ok(event) = receiver.recv() {
-                        if let Err(_) = NetworkHandler::handle_event(event, sender.clone()).await {
-                            // TODO: Log error
-                        }
+            tokio::spawn(async move {
+                while let Ok(event) = receiver.recv() {
+                    if let Err(_) = NetworkHandler::handle_event(event, sender.clone()).await {
+                        // TODO: Log error
+                    }
 
-                        if let Err(_) = sender.send(NetworkEvent::Complete) {
-                            // TODO: Log error
-                        }
+                    if let Err(_) = sender.send(NetworkEvent::Complete) {
+                        // TODO: Log error
                     }
                 }
-            )
+            })
         };
 
         Self {
@@ -62,7 +59,10 @@ impl NetworkHandler {
     }
 
     // Handle Event
-    pub async fn handle_event(event: NetworkEvent, sender: mpsc::Sender<NetworkEvent>) -> AppResult<()> {
+    pub async fn handle_event(
+        event: NetworkEvent,
+        sender: mpsc::Sender<NetworkEvent>,
+    ) -> AppResult<()> {
         match event {
             NetworkEvent::UpdateFeeds => {
                 NetworkHandler::update_feeds(sender).await?;
@@ -86,8 +86,10 @@ impl NetworkHandler {
         let mut new_feeds = vec![];
 
         for feed in feed_items.iter() {
-
-            sender.send(NetworkEvent::Updating(format!("Updating {}...", feed.title.clone().unwrap_or("Untitled Feed".to_string()))))?;
+            sender.send(NetworkEvent::Updating(format!(
+                "Updating {}...",
+                feed.title.clone().unwrap_or("Untitled Feed".to_string())
+            )))?;
 
             let links = find_feed_links(feed.id)?;
 
@@ -96,7 +98,7 @@ impl NetworkHandler {
             }
 
             for link in links.iter() {
-                if  let Ok(res) = reqwest::get(link.href.clone()).await {
+                if let Ok(res) = reqwest::get(link.href.clone()).await {
                     if let Ok(content) = res.text().await {
                         let new_feed = parser::parse(content.as_bytes());
 
@@ -119,11 +121,7 @@ impl NetworkHandler {
     }
 
     async fn add_feed(feed_url: String) -> AppResult<()> {
-
-        let content = reqwest::get(feed_url.as_str())
-            .await?
-            .text()
-            .await?;
+        let content = reqwest::get(feed_url.as_str()).await?.text().await?;
 
         let feed = parser::parse(content.as_bytes());
 
@@ -138,10 +136,8 @@ impl NetworkHandler {
     }
 
     async fn delete_feed(feed_id: i32) -> AppResult<()> {
-
         delete_feed(feed_id)?;
 
         Ok(())
     }
-
 }

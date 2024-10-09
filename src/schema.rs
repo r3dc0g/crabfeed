@@ -130,7 +130,6 @@ diesel::table! {
     }
 }
 
-
 diesel::joinable!(entry -> feed (feed_id));
 diesel::joinable!(entry_author -> author (author_id));
 diesel::joinable!(entry_author -> entry (entry_id));

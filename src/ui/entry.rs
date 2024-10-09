@@ -1,19 +1,19 @@
+use super::util::parse_html;
+use super::{components::*, SELECTED_STYLE};
+use super::{UiCallback, View};
 use crate::db::{find_entry_links, find_media_links, select_content, select_media};
 use crate::prelude::{Entry as EntryModel, Link};
-use super::{components::*, SELECTED_STYLE};
-use super::util::parse_html;
-use super::{View, UiCallback};
 use clipboard::{ClipboardContext, ClipboardProvider};
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::prelude::*;
 use ratatui::widgets::{ListState, Paragraph, Wrap};
-use crossterm::event::{KeyCode, KeyEvent};
 
 const HOVERED_STYLE: Style = Style::new().fg(Color::LightGreen);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum Section {
     Content,
-    Links
+    Links,
 }
 
 pub struct Entry {
@@ -60,8 +60,7 @@ impl Entry {
                     if let Some(body) = content.body {
                         if let Ok(tui_content) = parse_html(body.clone()) {
                             self.content = Some(tui_content);
-                        }
-                        else {
+                        } else {
                             self.content = Some(Paragraph::new(body.clone()).wrap(Wrap::default()));
                         }
                     }
@@ -75,8 +74,7 @@ impl Entry {
             if let Some(summary) = &entry.summary {
                 if let Ok(tui_summary) = parse_html(summary.clone()) {
                     self.summary = Some(tui_summary);
-                }
-                else {
+                } else {
                     self.summary = Some(Paragraph::new(summary.clone()).wrap(Wrap::default()));
                 }
             }
@@ -90,9 +88,9 @@ impl Entry {
                     if let Some(description) = &media.description {
                         if let Ok(tui_description) = parse_html(description.clone()) {
                             self.description = Some(tui_description);
-                        }
-                        else {
-                            self.description = Some(Paragraph::new(description.clone()).wrap(Wrap::default()));
+                        } else {
+                            self.description =
+                                Some(Paragraph::new(description.clone()).wrap(Wrap::default()));
                         }
                     }
                 }
@@ -121,26 +119,21 @@ impl Entry {
 
 impl View for Entry {
     fn render(&self, area: Rect, buf: &mut Buffer) {
-
         let possible_entry = self.entry.clone();
         let content_style = if let Some(section) = &self.selected_section {
             if *section == Section::Content {
                 SELECTED_STYLE
-            }
-            else {
+            } else {
                 Style::default()
             }
-        }
-        else {
+        } else {
             if let Some(section) = &self.hovered_section {
                 if *section == Section::Content {
                     HOVERED_STYLE
-                }
-                else {
+                } else {
                     Style::default()
                 }
-            }
-            else {
+            } else {
                 Style::default()
             }
         };
@@ -148,140 +141,116 @@ impl View for Entry {
         let link_style = if let Some(section) = &self.selected_section {
             if *section == Section::Links {
                 SELECTED_STYLE
-            }
-            else {
+            } else {
                 Style::default()
             }
-        }
-        else {
+        } else {
             if let Some(section) = &self.hovered_section {
                 if *section == Section::Links {
                     HOVERED_STYLE
-                }
-                else {
+                } else {
                     Style::default()
                 }
-            }
-            else {
+            } else {
                 Style::default()
             }
         };
 
         match possible_entry {
-
             Some(entry) => {
-
                 let entry_layout = Layout::new(
                     Direction::Vertical,
                     [
                         Constraint::Length(3),
                         Constraint::Max(80),
                         Constraint::Length(10),
-                    ]
+                    ],
                 )
                 .split(area);
 
                 BlockLabel::new()
-                    .label(
-                        entry.title.clone()
-                            .unwrap_or("No Title".to_string())
-                    )
+                    .label(entry.title.clone().unwrap_or("No Title".to_string()))
                     .render(entry_layout[0], buf);
 
                 match &self.content {
                     Some(content) => {
-
                         BlockText::default()
                             .title(None)
-                            .paragraph(
-                                content.clone().scroll((self.line_index, 0))
-                            )
+                            .paragraph(content.clone().scroll((self.line_index, 0)))
                             .style(content_style)
-                            .margin(
-                                Margin::new(
-                                    (0.05 * entry_layout[1].width as f32) as u16,
-                                    (0.05 * entry_layout[1].height as f32) as u16
-                                )
-                            )
+                            .margin(Margin::new(
+                                (0.05 * entry_layout[1].width as f32) as u16,
+                                (0.05 * entry_layout[1].height as f32) as u16,
+                            ))
                             .render(entry_layout[1], buf);
                     }
-                    None => {
-                        match &self.summary {
-                            Some(summary) => {
+                    None => match &self.summary {
+                        Some(summary) => {
+                            BlockText::default()
+                                .title(None)
+                                .paragraph(summary.clone().scroll((self.line_index, 0)))
+                                .style(content_style)
+                                .margin(Margin::new(
+                                    (0.05 * entry_layout[1].width as f32) as u16,
+                                    (0.05 * entry_layout[1].height as f32) as u16,
+                                ))
+                                .render(entry_layout[1], buf);
+                        }
+                        None => match &self.description {
+                            Some(description) => {
                                 BlockText::default()
                                     .title(None)
-                                    .paragraph(
-                                        summary.clone().scroll((self.line_index, 0))
-                                    )
+                                    .paragraph(description.clone().scroll((self.line_index, 0)))
                                     .style(content_style)
-                                    .margin(
-                                        Margin::new(
-                                            (0.05 * entry_layout[1].width as f32) as u16,
-                                            (0.05 * entry_layout[1].height as f32) as u16
-                                        )
-                                    )
+                                    .margin(Margin::new(
+                                        (0.05 * entry_layout[1].width as f32) as u16,
+                                        (0.05 * entry_layout[1].height as f32) as u16,
+                                    ))
                                     .render(entry_layout[1], buf);
                             }
                             None => {
-                                match &self.description {
-                                    Some(description) => {
-                                        BlockText::default()
-                                            .title(None)
-                                            .paragraph(
-                                                description.clone().scroll((self.line_index, 0))
-                                            )
-                                            .style(content_style)
-                                            .margin(
-                                                Margin::new(
-                                                    (0.05 * entry_layout[1].width as f32) as u16,
-                                                    (0.05 * entry_layout[1].height as f32) as u16
-                                                )
-                                            )
-                                            .render(entry_layout[1], buf);
-                                    }
-                                    None => {
-                                        BlockText::default()
-                                            .title(None)
-                                            .paragraph(
-                                                Paragraph::new("No Summary".to_string())
-                                                    .wrap(Wrap::default())
-                                            )
-                                            .style(content_style)
-                                            .margin(
-                                                Margin::new(
-                                                    (0.05 * entry_layout[1].width as f32) as u16,
-                                                    (0.05 * entry_layout[1].height as f32) as u16
-                                                )
-                                            )
-                                            .render(entry_layout[1], buf);
-
-                                    }
-                                }
+                                BlockText::default()
+                                    .title(None)
+                                    .paragraph(
+                                        Paragraph::new("No Summary".to_string())
+                                            .wrap(Wrap::default()),
+                                    )
+                                    .style(content_style)
+                                    .margin(Margin::new(
+                                        (0.05 * entry_layout[1].width as f32) as u16,
+                                        (0.05 * entry_layout[1].height as f32) as u16,
+                                    ))
+                                    .render(entry_layout[1], buf);
                             }
-                        }
-                    }
+                        },
+                    },
                 }
 
-                let links: Vec<String> = self.link_items.clone().into_iter().map(|link| link.href).collect();
+                let links: Vec<String> = self
+                    .link_items
+                    .clone()
+                    .into_iter()
+                    .map(|link| link.href)
+                    .collect();
 
                 ItemList::new(&links)
-                    .title(Some(format!("Links ({}/{})", self.link_state.selected().unwrap_or(0) + 1, self.link_items.len())))
+                    .title(Some(format!(
+                        "Links ({}/{})",
+                        self.link_state.selected().unwrap_or(0) + 1,
+                        self.link_items.len()
+                    )))
                     .style(link_style)
                     .render(entry_layout[2], buf, &mut self.link_state.clone());
-
             }
 
             None => {
                 BlockText::default()
                     .title(None)
-                    .paragraph(
-                        Paragraph::new("Error: No Entry Found".to_string())
-                    )
+                    .paragraph(Paragraph::new("Error: No Entry Found".to_string()))
                     .style(content_style)
                     .render(area, buf);
             }
         }
-
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
@@ -295,7 +264,8 @@ impl View for Entry {
                         Section::Links => {
                             if let Some(index) = self.link_state.selected() {
                                 let link = &self.link_items[index];
-                                let mut clipboard: ClipboardContext = ClipboardProvider::new().unwrap();
+                                let mut clipboard: ClipboardContext =
+                                    ClipboardProvider::new().unwrap();
                                 if let Err(_) = clipboard.set_contents(link.href.clone()) {
                                     // TODO: Add error handling
                                 }
@@ -321,8 +291,7 @@ impl View for Entry {
                         }
                     }
                     return None;
-                }
-                else if let Some(section) = &self.selected_section {
+                } else if let Some(section) = &self.selected_section {
                     match section {
                         Section::Content => {
                             self.line_index += 1;
@@ -332,22 +301,19 @@ impl View for Entry {
                             if let Some(index) = self.link_state.selected() {
                                 if index + 1 == self.link_items.len() {
                                     self.link_state.select(Some(0));
-                                }
-                                else {
+                                } else {
                                     self.link_state.select(Some(index + 1));
                                 }
-                            }
-                            else {
+                            } else {
                                 self.link_state.select(Some(0));
                             }
                             return None;
                         }
                     }
-                }
-                else {
+                } else {
                     return None;
                 }
-            },
+            }
             KeyCode::Char('k') | KeyCode::Up => {
                 if self.selected_section.is_none() {
                     if let Some(section) = &self.hovered_section {
@@ -362,8 +328,7 @@ impl View for Entry {
                             }
                         }
                     }
-                }
-                else if let Some(section) = &self.selected_section {
+                } else if let Some(section) = &self.selected_section {
                     match section {
                         Section::Content => {
                             if self.line_index > 0 {
@@ -375,12 +340,10 @@ impl View for Entry {
                             if let Some(index) = self.link_state.selected() {
                                 if index == 0 {
                                     self.link_state.select(Some(self.link_items.len() - 1));
-                                }
-                                else {
+                                } else {
                                     self.link_state.select(Some(index - 1));
                                 }
-                            }
-                            else {
+                            } else {
                                 self.link_state.select(Some(self.link_items.len() - 1));
                             }
                             return None;
@@ -391,9 +354,8 @@ impl View for Entry {
             }
             KeyCode::Enter => {
                 if let Some(_) = &self.selected_section {
-                   return None;
-                }
-                else {
+                    return None;
+                } else {
                     if let Some(section) = &self.hovered_section {
                         match section {
                             Section::Content => {
@@ -412,7 +374,6 @@ impl View for Entry {
                 }
             }
             KeyCode::Char('h') | KeyCode::Char('q') | KeyCode::Esc => {
-
                 self.link_state.select(None);
 
                 if key.code != KeyCode::Char('h') {
@@ -421,7 +382,7 @@ impl View for Entry {
                             Section::Content => {
                                 self.selected_section = None;
                                 self.hovered_section = Some(Section::Content);
-                            },
+                            }
                             Section::Links => {
                                 self.selected_section = None;
                                 self.hovered_section = Some(Section::Links);
@@ -431,18 +392,13 @@ impl View for Entry {
                     }
                 }
 
-                return Some(Box::new(
-                    move |app| {
-                        app.ui.update_entries();
-                        app.ui.back();
-                        Ok(())
-                    }
-                ))
+                return Some(Box::new(move |app| {
+                    app.ui.update_entries();
+                    app.ui.back();
+                    Ok(())
+                }));
             }
-            _ => {
-                None
-            }
+            _ => None,
         }
     }
 }
-
