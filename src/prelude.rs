@@ -1,10 +1,10 @@
 use crate::schema::*;
+use crate::AppResult;
 use chrono::NaiveDateTime;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use feed_rs::model::Text;
 use mime::Mime;
-use crate::AppResult;
 
 #[derive(Clone, Queryable, Selectable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = feed)]

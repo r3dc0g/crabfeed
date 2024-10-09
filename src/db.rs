@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::prelude::*;
 use crate::schema::*;
+use crate::AppResult;
 use diesel::prelude::*;
 use diesel::sql_query;
 use diesel::sqlite::SqliteConnection;
@@ -9,7 +10,6 @@ use html_parser::{Dom, Node};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
-use crate::AppResult;
 
 fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
     sql_query(

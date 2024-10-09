@@ -1,7 +1,7 @@
 use crate::time::{SystemTimeTick, Tick, TIME_STEP, TIME_STEP_MILLIS};
+use crate::AppResult;
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, KeyEventKind, MouseEvent};
 use std::{sync::mpsc, thread};
-use crate::AppResult;
 
 pub enum TerminalEvent {
     Key(KeyEvent),
