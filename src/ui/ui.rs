@@ -20,7 +20,7 @@ pub struct Ui {
     feeds: Feeds,
     entries: Entries,
     entry: EntryView,
-    add_feed_popup: Add,
+    popup: Option<Box<dyn View>>,
 }
 
 impl Ui {
@@ -29,7 +29,6 @@ impl Ui {
         feeds.select(true);
         let entries = Entries::new(feeds.get_selected_feed().as_ref());
         let entry = EntryView::new(None);
-        let add_feed_popup = Add::new();
 
         Self {
             navigation_stack: vec![Route::default()],
@@ -39,7 +38,7 @@ impl Ui {
             feeds,
             entries,
             entry,
-            add_feed_popup,
+            popup: None,
         }
     }
 
@@ -73,6 +72,10 @@ impl Ui {
         self.entry.set_entry(entry);
     }
 
+    pub fn unset_popup(&mut self) {
+        self.popup = None;
+    }
+
     pub fn update(&mut self) {
         let current_route = self
             .get_current_route()
@@ -99,6 +102,11 @@ impl Ui {
     pub fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key {
             _ if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc => {
+
+                if let Some(popup) = &mut self.popup {
+                    return popup.handle_key_event(key);
+                }
+
                 if self.get_current_route().unwrap_or(&Route::default()).id == RouteId::Entry {
                     return self.entry.handle_key_event(key);
                 }
@@ -114,7 +122,7 @@ impl Ui {
                 }
             }
             _ if key.code == KeyCode::Char('a') && key.modifiers == KeyModifiers::CONTROL => {
-                self.set_current_route(Route::new(RouteId::Home, ActiveBlock::AddFeed));
+                self.popup = Some(Box::new(Add::new()));
                 return None;
             }
             _ if key.code == KeyCode::Char('u') && key.modifiers == KeyModifiers::CONTROL => {
@@ -130,11 +138,13 @@ impl Ui {
                     .get_current_route()
                     .unwrap_or(&Route::default())
                     .clone();
+                if let Some(popup) = &mut self.popup {
+                    return popup.handle_key_event(key);
+                }
                 match current_route.id {
                     RouteId::Home => match current_route.active_block {
                         ActiveBlock::Feeds => self.feeds.handle_key_event(key),
                         ActiveBlock::Entries => self.entries.handle_key_event(key),
-                        ActiveBlock::AddFeed => self.add_feed_popup.handle_key_event(key),
                         _ => None,
                     },
                     RouteId::Entry => self.entry.handle_key_event(key),
@@ -167,7 +177,7 @@ impl Widget for &mut Ui {
 
         match current_route.id {
             RouteId::Home => {
-                if area.height > (area.width as f32 * 0.75) as u16 {
+                if area.height > (area.width as f32 * 0.5) as u16 {
                     match current_route.active_block {
                         ActiveBlock::Feeds => {
                             self.feeds.render(app_layout[1], buf);
@@ -189,11 +199,8 @@ impl Widget for &mut Ui {
                     self.entries.render(lists_section[1], buf);
                 }
 
-                match current_route.active_block {
-                    ActiveBlock::AddFeed => {
-                        self.add_feed_popup.render(app_layout[1], buf);
-                    }
-                    _ => {}
+                if let Some(popup) = &self.popup {
+                    popup.render(app_layout[1], buf);
                 }
             }
 

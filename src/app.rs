@@ -24,7 +24,6 @@ pub enum ActiveBlock {
     Feeds,
     Entries,
     Entry,
-    AddFeed,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

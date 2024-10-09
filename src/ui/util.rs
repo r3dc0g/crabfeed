@@ -1,6 +1,5 @@
 // Takes in RAW HTML and returns a representation as a list of ratatui widgets
 
-use crate::error::Error;
 use crate::AppResult;
 use html_parser::{Dom, Node};
 use ratatui::{style::*, text::*, widgets::*};
