@@ -235,6 +235,16 @@ pub fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppResult<
     }
 }
 
+pub fn update_feed_title(feed_id: &i32, title: String) -> AppResult<()> {
+    let conn = &mut connect()?;
+
+    diesel::update(feed::table.filter(feed::id.eq(feed_id)))
+        .set(feed::title.eq(title))
+        .execute(conn)?;
+
+    Ok(())
+}
+
 pub fn get_feeds() -> AppResult<Vec<Feed>> {
     use crate::schema::feed::dsl::*;
 

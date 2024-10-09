@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::{time::TIME_STEP, AppResult};
 use std::sync::mpsc;
 
-use crate::db::{self, delete_feed, find_feed_links, get_feeds, insert_feed, insert_link};
+use crate::db::{self, delete_feed, find_feed_links, get_feeds, insert_feed, insert_link, update_feed_title};
 use feed_rs::parser;
 use reqwest;
 use tokio::task::JoinHandle;
@@ -102,8 +102,15 @@ impl NetworkHandler {
                     if let Ok(content) = res.text().await {
                         let new_feed = parser::parse(content.as_bytes());
 
-                        if let Ok(feed) = new_feed {
-                            new_feeds.push(feed);
+                        if let Ok(neofeed) = new_feed {
+                            if let Some(new_title) = &neofeed.title {
+                                if let Some(old_title) = &feed.title {
+                                    if new_title.content != *old_title {
+                                        update_feed_title(&feed.id, new_title.content.clone())?;
+                                    }
+                                }
+                            }
+                            new_feeds.push(neofeed);
                         };
                     }
                 }
