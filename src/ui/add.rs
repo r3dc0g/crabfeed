@@ -51,7 +51,7 @@ impl View for Add {
                     .wrap(Wrap::default()),
                 ),
         ))
-        .height(2)
+        .height(3)
         .width(60)
         .render(area, buf);
     }
