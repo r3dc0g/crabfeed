@@ -5,6 +5,7 @@ use super::feeds::Feeds;
 use super::View;
 use super::{components::*, UiCallback};
 use crate::app::{ActiveBlock, Route, RouteId};
+use crate::config::{get_configuration, Settings};
 use crate::network::NetworkEvent;
 use crate::prelude::Entry;
 
@@ -21,6 +22,7 @@ pub struct Ui {
     entries: Entries,
     entry: EntryView,
     popup: Option<Box<dyn View>>,
+    config: Settings,
 }
 
 impl Ui {
@@ -29,6 +31,7 @@ impl Ui {
         feeds.select(true);
         let entries = Entries::new(feeds.get_selected_feed().as_ref());
         let entry = EntryView::new(None);
+        let config = get_configuration().unwrap_or_default();
 
         Self {
             navigation_stack: vec![Route::default()],
@@ -39,6 +42,7 @@ impl Ui {
             entries,
             entry,
             popup: None,
+            config,
         }
     }
 
@@ -179,10 +183,10 @@ impl Widget for &mut Ui {
                 if area.height > (area.width as f32 * 0.5) as u16 {
                     match current_route.active_block {
                         ActiveBlock::Feeds => {
-                            self.feeds.render(app_layout[1], buf);
+                            self.feeds.render(app_layout[1], buf, &self.config);
                         }
                         ActiveBlock::Entries => {
-                            self.entries.render(app_layout[1], buf);
+                            self.entries.render(app_layout[1], buf, &self.config);
                         }
                         _ => {}
                     }
@@ -193,18 +197,18 @@ impl Widget for &mut Ui {
                     )
                     .split(app_layout[1]);
 
-                    self.feeds.render(lists_section[0], buf);
+                    self.feeds.render(lists_section[0], buf, &self.config);
 
-                    self.entries.render(lists_section[1], buf);
+                    self.entries.render(lists_section[1], buf, &self.config);
                 }
 
                 if let Some(popup) = &self.popup {
-                    popup.render(app_layout[1], buf);
+                    popup.render(app_layout[1], buf, &self.config);
                 }
             }
 
             RouteId::Entry => {
-                self.entry.render(app_layout[1], buf);
+                self.entry.render(app_layout[1], buf, &self.config);
             }
         }
 

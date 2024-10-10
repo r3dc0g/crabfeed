@@ -1,4 +1,4 @@
-use crate::network::NetworkEvent;
+use crate::{config::Settings, network::NetworkEvent};
 
 use super::{
     components::{BlockText, Popup},
@@ -9,7 +9,7 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Paragraph, Wrap},
+    widgets::{Paragraph, Wrap},
 };
 
 pub struct Add {
@@ -35,10 +35,10 @@ impl Add {
 }
 
 impl View for Add {
-    fn render(&self, area: Rect, buf: &mut Buffer) {
+    fn render(&self, area: Rect, buf: &mut Buffer, _config: &Settings) {
         Popup::new(Some(
             BlockText::default()
-                .title(Some("Add Feed".to_string()))
+                .title(Some("Feed URL".to_string()))
                 .paragraph(
                     Paragraph::new(
                         Line::from(vec![
@@ -48,12 +48,10 @@ impl View for Add {
                         ])
                         .alignment(Alignment::Left),
                     )
-                    .block(Block::default().borders(Borders::ALL).title("URL"))
                     .wrap(Wrap::default()),
                 )
-                .margin(Margin::new(2, 2)),
         ))
-        .height(8)
+        .height(2)
         .width(60)
         .render(area, buf);
     }

@@ -1,14 +1,13 @@
-use super::util::parse_html;
-use super::{components::*, SELECTED_STYLE};
+use super::util::{parse_hex, parse_html};
+use super::components::*;
 use super::{UiCallback, View};
+use crate::config::Settings;
 use crate::db::{find_entry_links, find_media_links, select_content, select_media};
 use crate::prelude::{Entry as EntryModel, Link};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::prelude::*;
 use ratatui::widgets::{ListState, Paragraph, Wrap};
-
-const HOVERED_STYLE: Style = Style::new().fg(Color::LightGreen);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum Section {
@@ -118,18 +117,26 @@ impl Entry {
 }
 
 impl View for Entry {
-    fn render(&self, area: Rect, buf: &mut Buffer) {
-        let possible_entry = self.entry.clone();
+    fn render(&self, area: Rect, buf: &mut Buffer, config: &Settings) {
+
+        let primary = parse_hex(&config.colors.primary);
+        let secondary = parse_hex(&config.colors.secondary);
+
+        let hovered_style = Style::default().fg(secondary);
+        let selected_style = Style::default().fg(primary);
+
+        let possible_entry = &self.entry;
+
         let content_style = if let Some(section) = &self.selected_section {
             if *section == Section::Content {
-                SELECTED_STYLE
+                selected_style
             } else {
                 Style::default()
             }
         } else {
             if let Some(section) = &self.hovered_section {
                 if *section == Section::Content {
-                    HOVERED_STYLE
+                    hovered_style
                 } else {
                     Style::default()
                 }
@@ -140,14 +147,14 @@ impl View for Entry {
 
         let link_style = if let Some(section) = &self.selected_section {
             if *section == Section::Links {
-                SELECTED_STYLE
+                selected_style
             } else {
                 Style::default()
             }
         } else {
             if let Some(section) = &self.hovered_section {
                 if *section == Section::Links {
-                    HOVERED_STYLE
+                    hovered_style
                 } else {
                     Style::default()
                 }

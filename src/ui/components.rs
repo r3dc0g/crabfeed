@@ -2,9 +2,13 @@ use ratatui::prelude::*;
 use ratatui::widgets::*;
 use ratatui::{
     layout::Rect,
-    style::{Color, Style},
+    style::Style,
     widgets::{Block, Borders, List, ListState, Paragraph},
 };
+
+use crate::config::get_configuration;
+
+use super::util::parse_hex;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
 pub struct BlockLabel {
@@ -128,6 +132,10 @@ where
     type State = ListState;
 
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+
+        let hightlight = parse_hex(&get_configuration().unwrap_or_default().colors.highlight);
+        let highlight_style = Style::default().bg(hightlight);
+
         StatefulWidget::render(
             List::new(self.items.clone())
                 .block(
@@ -136,7 +144,7 @@ where
                         .title(self.title.clone().unwrap_or("".to_string()))
                         .border_style(self.style),
                 )
-                .highlight_style(Style::default().bg(Color::DarkGray)),
+                .highlight_style(highlight_style),
             area,
             buf,
             state,

@@ -1,6 +1,6 @@
 use crate::AppResult;
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug, PartialEq)]
 pub struct Settings {
     pub colors: ColorSettings,
 }
@@ -9,15 +9,15 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             colors: ColorSettings {
-                primary: "#00ff00".to_string(),
+                primary: "#ff0000".to_string(),
                 secondary: "#ffff00".to_string(),
-                highlight: "#666666".to_string(),
+                highlight: "#999999".to_string(),
             },
         }
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug, PartialEq)]
 pub struct ColorSettings {
     pub primary: String,
     pub secondary: String,
@@ -54,4 +54,9 @@ pub fn get_configuration() -> AppResult<Settings> {
 
 }
 
+#[test]
+fn configuration_is_found() {
+    let config = get_configuration().unwrap();
 
+    assert_ne!(config, Settings::default());
+}

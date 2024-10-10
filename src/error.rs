@@ -1,6 +1,4 @@
-#![allow(dead_code)]
-
-use crate::{config::Settings, network::NetworkEvent};
+use crate::network::NetworkEvent;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {

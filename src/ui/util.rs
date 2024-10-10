@@ -2,7 +2,7 @@
 
 use crate::AppResult;
 use html_parser::{Dom, Node};
-use ratatui::{style::*, text::*, widgets::*};
+use ratatui::{prelude::*, widgets::*};
 
 fn remove_bad_chars(text: &str) -> String {
     text.replace("&nbsp;", "").replace("&#8217;", "'")
@@ -215,6 +215,14 @@ pub fn parse_html<'a>(html: String) -> AppResult<Paragraph<'a>> {
     Ok(elements)
 }
 
+pub fn parse_hex(hex: &String) -> Color {
+    Color::Rgb(
+        u8::from_str_radix(&hex[1..3], 16).unwrap(),
+        u8::from_str_radix(&hex[3..5], 16).unwrap(),
+        u8::from_str_radix(&hex[5..7], 16).unwrap(),
+    )
+}
+
 #[test]
 fn parse_html_test() {
     let html = r#"
@@ -251,4 +259,13 @@ fn parse_html_test() {
 </div>
 
     "#.to_string();
+}
+
+#[test]
+fn hex_code_string_returns_rgb() {
+
+    let hex = "#00ff00".to_string();
+    let color = parse_hex(&hex);
+    assert_eq!(color, Color::Rgb(0, 255, 0));
+
 }
