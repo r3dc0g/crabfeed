@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::network::NetworkEvent;
 
 #[derive(thiserror::Error, Debug)]
@@ -39,4 +37,7 @@ pub enum Error {
 
     #[error(transparent)]
     RecvTimeout(#[from] std::sync::mpsc::RecvTimeoutError),
+
+    #[error(transparent)]
+    ConfigurationError(#[from] config::ConfigError),
 }

@@ -1,12 +1,14 @@
 use crate::app::{ActiveBlock, Route, RouteId};
+use crate::config::Settings;
 use crate::db::{get_entries, mark_entry_read};
 use crate::prelude::{Entry, Feed};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::style::Stylize;
 use ratatui::{buffer::Buffer, layout::Rect, prelude::*, style::Style, widgets::ListState};
 
+use super::util::parse_hex;
 use super::View;
-use super::{components::*, UiCallback, SELECTED_STYLE, UNSELECTED_STYLE};
+use super::{components::*, UiCallback};
 
 pub struct Entries {
     list_state: ListState,
@@ -46,7 +48,11 @@ impl Entries {
 }
 
 impl View for Entries {
-    fn render(&self, area: Rect, buf: &mut Buffer) {
+    fn render(&self, area: Rect, buf: &mut Buffer, config: &Settings) {
+        let primary = parse_hex(&config.colors.primary);
+        let selected_style = Style::default().fg(primary);
+        let unselected_style = Style::default();
+
         let entries: Vec<(bool, String)> = self
             .entry_items
             .iter()
@@ -96,8 +102,8 @@ impl View for Entries {
         ItemList::new(&lines)
             .title(Some(format!("Entries ({}/{})", unread_len, list_len)))
             .style(match self.selected {
-                true => SELECTED_STYLE,
-                false => UNSELECTED_STYLE,
+                true => selected_style,
+                false => unselected_style,
             })
             .render(area, buf, &mut self.list_state.clone());
     }

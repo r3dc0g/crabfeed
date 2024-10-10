@@ -1,6 +1,7 @@
 use crate::app::ActiveBlock;
 use crate::app::Route;
 use crate::app::RouteId;
+use crate::config::Settings;
 use crate::db::get_feeds;
 use crate::prelude::Feed;
 use crossterm::event::KeyCode;
@@ -8,10 +9,9 @@ use crossterm::event::KeyEvent;
 use ratatui::{buffer::Buffer, layout::Rect, prelude::*, widgets::ListState};
 
 use super::components::*;
+use super::util::parse_hex;
 use super::UiCallback;
 use super::View;
-use super::SELECTED_STYLE;
-use super::UNSELECTED_STYLE;
 
 pub struct Feeds {
     list_state: ListState,
@@ -43,7 +43,12 @@ impl Feeds {
 }
 
 impl View for Feeds {
-    fn render(&self, area: Rect, buf: &mut Buffer) {
+    fn render(&self, area: Rect, buf: &mut Buffer, config: &Settings) {
+        let primary = parse_hex(&config.colors.primary);
+
+        let selected_style = Style::default().fg(primary);
+        let unselected_style = Style::default();
+
         let feed_titles: Vec<String> = self
             .feed_items
             .iter()
@@ -53,8 +58,8 @@ impl View for Feeds {
         ItemList::new(&feed_titles)
             .title(Some("Feeds".to_string()))
             .style(match self.selected {
-                true => SELECTED_STYLE,
-                false => UNSELECTED_STYLE,
+                true => selected_style,
+                false => unselected_style,
             })
             .render(area, buf, &mut self.list_state.clone());
     }
