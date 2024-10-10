@@ -49,7 +49,7 @@ impl View for Add {
                         .alignment(Alignment::Left),
                     )
                     .wrap(Wrap::default()),
-                )
+                ),
         ))
         .height(2)
         .width(60)

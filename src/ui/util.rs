@@ -263,9 +263,7 @@ fn parse_html_test() {
 
 #[test]
 fn hex_code_string_returns_rgb() {
-
     let hex = "#00ff00".to_string();
     let color = parse_hex(&hex);
     assert_eq!(color, Color::Rgb(0, 255, 0));
-
 }

@@ -2,7 +2,9 @@ use crate::error::Error;
 use crate::{time::TIME_STEP, AppResult};
 use std::sync::mpsc;
 
-use crate::db::{self, delete_feed, find_feed_links, get_feeds, insert_feed, insert_link, update_feed_title};
+use crate::db::{
+    self, delete_feed, find_feed_links, get_feeds, insert_feed, insert_link, update_feed_title,
+};
 use feed_rs::parser;
 use reqwest;
 use tokio::task::JoinHandle;

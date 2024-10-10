@@ -132,7 +132,6 @@ where
     type State = ListState;
 
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-
         let hightlight = parse_hex(&get_configuration().unwrap_or_default().colors.highlight);
         let highlight_style = Style::default().bg(hightlight);
 

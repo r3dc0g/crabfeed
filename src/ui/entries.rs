@@ -49,7 +49,6 @@ impl Entries {
 
 impl View for Entries {
     fn render(&self, area: Rect, buf: &mut Buffer, config: &Settings) {
-
         let primary = parse_hex(&config.colors.primary);
         let selected_style = Style::default().fg(primary);
         let unselected_style = Style::default();

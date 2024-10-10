@@ -1,8 +1,5 @@
 use crossterm::event::KeyEvent;
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-};
+use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::{app::App, config::Settings, AppResult};
 

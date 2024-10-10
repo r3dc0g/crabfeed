@@ -33,25 +33,15 @@ impl TryFrom<config::Config> for Settings {
 }
 
 pub fn get_configuration() -> AppResult<Settings> {
-
     let user = std::env::var("USER")?;
 
     let settings = config::Config::builder()
-        .add_source(config::File::from_str(format!("/home/{user}/.config/crabfeed/config.yaml").as_str(), config::FileFormat::Yaml));
+        .add_source(config::File::with_name(
+            format!("/home/{user}/.config/crabfeed/config.yaml").as_str(),
+        ))
+        .build()?;
 
-    match settings.build() {
-        Ok(settings) => {
-            match settings.try_into() {
-                Ok(settings) => Ok(settings),
-
-                Err(err) => Err(err.into()),
-            }
-        }
-        Err(_) => {
-            return Ok(Settings::default());
-        },
-    }
-
+    Ok(settings.try_into()?)
 }
 
 #[test]

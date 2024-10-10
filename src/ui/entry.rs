@@ -1,5 +1,5 @@
-use super::util::{parse_hex, parse_html};
 use super::components::*;
+use super::util::{parse_hex, parse_html};
 use super::{UiCallback, View};
 use crate::config::Settings;
 use crate::db::{find_entry_links, find_media_links, select_content, select_media};
@@ -118,7 +118,6 @@ impl Entry {
 
 impl View for Entry {
     fn render(&self, area: Rect, buf: &mut Buffer, config: &Settings) {
-
         let primary = parse_hex(&config.colors.primary);
         let secondary = parse_hex(&config.colors.secondary);
 
