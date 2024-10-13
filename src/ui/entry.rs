@@ -386,16 +386,18 @@ impl View for Entry {
                     if let Some(section) = &self.selected_section {
                         match section {
                             Section::Content => {
-                                self.selected_section = None;
                                 self.hovered_section = Some(Section::Content);
                             }
                             Section::Links => {
-                                self.selected_section = None;
                                 self.hovered_section = Some(Section::Links);
                             }
                         }
+                        self.selected_section = None;
                         return None;
                     }
+                } else {
+                    self.hovered_section = Some(Section::Content);
+                    self.selected_section = None;
                 }
 
                 return Some(Box::new(move |app| {
