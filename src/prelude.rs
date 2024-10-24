@@ -18,6 +18,13 @@ pub struct Feed {
     pub published: Option<NaiveDateTime>,
 }
 
+pub struct FeedData {
+    pub id: i32,
+    pub title: String,
+    pub url: String,
+    pub description: String,
+}
+
 #[derive(Insertable, Debug)]
 #[diesel(table_name = feed)]
 pub struct NewFeed<'a> {
@@ -113,6 +120,15 @@ pub struct Entry {
     pub summary: Option<String>,
     pub source: Option<String>,
     pub read: Option<bool>,
+}
+
+pub struct EntryData {
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub links: Vec<Link>,
+    pub media: Vec<Media>,
+    pub read: bool,
 }
 
 #[derive(Insertable, Debug)]
