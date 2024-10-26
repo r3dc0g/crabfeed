@@ -1,6 +1,6 @@
 use crate::app::{ActiveBlock, Route, RouteId};
 use crate::config::Settings;
-use crate::db::{get_entries, mark_entry_read};
+use crate::db::{mark_entry_read, select_all_entries};
 use crate::prelude::{Entry, Feed};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::style::Stylize;
@@ -21,7 +21,7 @@ impl Entries {
         match selected_feed {
             Some(feed) => Self {
                 list_state: ListState::default(),
-                entry_items: get_entries(feed).unwrap_or(vec![]),
+                entry_items: select_all_entries(feed).unwrap_or(vec![]),
                 selected: false,
             },
             None => Self {
@@ -37,7 +37,7 @@ impl Entries {
     }
 
     pub fn update_entries(&mut self, feed: &Feed) {
-        let mut items = get_entries(feed).unwrap_or(vec![]);
+        let mut items = select_all_entries(feed).unwrap_or(vec![]);
         items.reverse();
         self.entry_items = items;
     }

@@ -1,19 +1,19 @@
 use crate::error::Error;
 use crate::prelude::*;
-use crate::schema::*;
 use crate::AppResult;
-use diesel::prelude::*;
-use diesel::sql_query;
-use diesel::sqlite::SqliteConnection;
 use feed_rs::model;
 use html_parser::{Dom, Node};
+use sqlx::query;
+use sqlx::query_as;
+use sqlx::Connection;
+use sqlx::SqliteConnection;
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
 
-fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
-    sql_query(
-        "CREATE TABLE feed ( \
+async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
+    query!(
+        "CREATE TABLE IF NOT EXISTS feed ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         title VARCHAR, \
         updated DATETIME, \
@@ -22,10 +22,11 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         published DATETIME \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE entry ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS entry ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         feed_id INTEGER UNSIGNED NOT NULL, \
         title VARCHAR, \
@@ -40,20 +41,22 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(content_id) REFERENCES content(content_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE author ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS author ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         name VARCHAR NOT NULL, \
         uri VARCHAR, \
         email VARCHAR \
      )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE link ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS link ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         href VARCHAR NOT NULL, \
         rel VARCHAR, \
@@ -63,10 +66,11 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         length BIGINT \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE content ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS content ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         body TEXT, \
         content_type VARCHAR, \
@@ -75,30 +79,33 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(src) REFERENCES link(link_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE category ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS category ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         term VARCHAR NOT NULL, \
         scheme VARCHAR, \
         label VARCHAR \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE media ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS media ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         title VARCHAR, \
         thumbnail VARCHAR, \
         description VARCHAR \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE media_link ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS media_link ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         link_id INTEGER NOT NULL, \
         media_id INTEGER NOT NULL, \
@@ -106,10 +113,11 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(media_id) REFERENCES media(media_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE feed_author ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS feed_author ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         author_id INTEGER NOT NULL, \
         feed_id INTEGER NOT NULL, \
@@ -117,10 +125,11 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE entry_author ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS entry_author ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         author_id INTEGER NOT NULL, \
         entry_id INTEGER NOT NULL, \
@@ -128,10 +137,11 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE feed_link ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS feed_link ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         link_id INTEGER NOT NULL, \
         feed_id INTEGER NOT NULL, \
@@ -139,10 +149,11 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE entry_link ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS entry_link ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         link_id INTEGER NOT NULL, \
         entry_id INTEGER NOT NULL, \
@@ -150,10 +161,11 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE feed_category ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS feed_category ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         category_id INTEGER NOT NULL, \
         feed_id INTEGER NOT NULL, \
@@ -161,10 +173,11 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
-    sql_query(
-        "CREATE TABLE entry_category ( \
+    query!(
+        "CREATE TABLE IF NOT EXISTS entry_category ( \
         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
         category_id INTEGER NOT NULL, \
         entry_id INTEGER NOT NULL, \
@@ -172,16 +185,17 @@ fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
         FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
     )",
     )
-    .execute(conn)?;
+    .execute(&mut *conn)
+    .await?;
 
     Ok(())
 }
 
-pub fn connect() -> AppResult<SqliteConnection> {
+pub async fn connect() -> AppResult<SqliteConnection> {
     if cfg!(unix) {
         let mut first_creation = false;
         let home = env::var("HOME").unwrap();
-        let database_folder = format!("{}/.local/share/crabfeed/", home);
+        let database_folder = format!("sqlite:///{}/.local/share/crabfeed/", home);
         let database_url = format!("{}/crabfeed.db", database_folder);
         create_dir_all(database_folder)?;
 
@@ -189,10 +203,10 @@ pub fn connect() -> AppResult<SqliteConnection> {
             first_creation = true;
         }
 
-        let mut connection = SqliteConnection::establish(&database_url)?;
+        let mut connection = SqliteConnection::connect(&database_url).await?;
 
         if first_creation {
-            setup_database(&mut connection)?;
+            setup_database(&mut connection).await?;
         }
 
         return Ok(connection);
@@ -201,7 +215,7 @@ pub fn connect() -> AppResult<SqliteConnection> {
     Err(Error::Static("Unsupported OS"))
 }
 
-pub fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppResult<i32> {
+pub async fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppResult<i64> {
     let mut builder = FeedBuilder::new();
 
     let new_feed = builder
@@ -212,222 +226,333 @@ pub fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppResult<
         .published(feed.published)
         .build()?;
 
-    let possible_feed = feed::table
-        .filter(feed::title.eq(&new_feed.title))
-        .select(Feed::as_select())
-        .get_result(conn);
+    match query_as!(
+        Feed,
+        r#"
+        SELECT *
+        FROM feed
+        WHERE feed.title = ?
+        "#,
+        new_feed.title
+    )
+    .fetch_one(&mut *conn)
+    .await
+    {
+        Ok(found_feed) => {
+            insert_entries(conn, feed.entries, found_feed.id).await?;
 
-    if let Ok(found_feed) = possible_feed {
-        insert_entries(conn, feed.entries, found_feed.id)?;
+            return Ok(found_feed.id);
+        }
+        Err(_) => {
+            query!(
+                r#"
+                INSERT INTO feed (title, updated, description, language, published)
+                VALUES ($1, $2, $3, $4, $5)
+                "#,
+                new_feed.title,
+                new_feed.updated,
+                new_feed.description,
+                new_feed.language,
+                new_feed.published
+            )
+            .execute(&mut *conn)
+            .await?;
 
-        return Ok(found_feed.id);
-    } else {
-        let ret_feed: Feed = diesel::insert_into(feed::table)
-            .values(&new_feed)
-            .returning(Feed::as_returning())
-            .get_result(conn)?;
+            let ret_feed = query_as!(
+                Feed,
+                r#"
+                SELECT *
+                FROM feed
+                WHERE feed.title = ?
+                "#,
+                new_feed.title
+            )
+            .fetch_one(&mut *conn)
+            .await?;
 
-        insert_authors(conn, feed.authors, Some(ret_feed.id), None)?;
-        insert_entries(conn, feed.entries, ret_feed.id)?;
-        insert_links(conn, feed.links, Some(ret_feed.id), None)?;
-        insert_categories(conn, feed.categories, Some(ret_feed.id), None)?;
-        return Ok(ret_feed.id);
+            insert_authors(conn, feed.authors, Some(ret_feed.id), None).await?;
+            insert_entries(conn, feed.entries, ret_feed.id).await?;
+            insert_links(conn, feed.links, Some(ret_feed.id), None).await?;
+            insert_categories(conn, feed.categories, Some(ret_feed.id), None).await?;
+            return Ok(ret_feed.id);
+        }
     }
 }
 
-pub fn update_feed_title(feed_id: &i32, title: String) -> AppResult<()> {
-    let conn = &mut connect()?;
-
-    diesel::update(feed::table.filter(feed::id.eq(feed_id)))
-        .set(feed::title.eq(title))
-        .execute(conn)?;
+pub async fn update_feed_title(
+    conn: &mut SqliteConnection,
+    feed_id: &i64,
+    title: String,
+) -> AppResult<()> {
+    query!(
+        r#"
+        UPDATE feed
+        SET title = $1
+        WHERE feed.id = $2
+        "#,
+        title,
+        feed_id
+    )
+    .execute(conn)
+    .await?;
 
     Ok(())
 }
 
-pub fn get_feeds() -> AppResult<Vec<Feed>> {
-    use crate::schema::feed::dsl::*;
-
-    let conn = &mut connect()?;
-
-    let results = feed.load::<Feed>(conn)?;
+pub async fn select_all_feeds(conn: &mut SqliteConnection) -> AppResult<Vec<Feed>> {
+    let results = query_as!(
+        Feed,
+        r#"
+        SELECT * FROM feed
+        "#
+    )
+    .fetch_all(&mut *conn)
+    .await?;
 
     Ok(results)
 }
 
-pub fn select_feed(feed_id: &i32) -> AppResult<Feed> {
-    let conn = &mut connect()?;
-
-    let result = feed::table
-        .filter(feed::id.eq(feed_id))
-        .select(Feed::as_select())
-        .get_result(conn)?;
-
-    Ok(result)
-}
-
-pub fn select_entry(entry_id: &i32) -> AppResult<Entry> {
-    let conn = &mut connect()?;
-
-    let result = entry::table
-        .filter(entry::id.eq(entry_id))
-        .select(Entry::as_select())
-        .get_result(conn)?;
+pub async fn select_feed(conn: &mut SqliteConnection, feed_id: &i64) -> AppResult<Feed> {
+    let result = query_as!(
+        Feed,
+        r#"
+        SELECT *
+        FROM feed
+        WHERE feed.id = $1
+        "#,
+        feed_id
+    )
+    .fetch_one(&mut *conn)
+    .await?;
 
     Ok(result)
 }
 
-pub fn select_content(content_id: &i32) -> AppResult<Content> {
-    let conn = &mut connect()?;
-
-    let result = content::table
-        .filter(content::id.eq(content_id))
-        .select(Content::as_select())
-        .get_result(conn)?;
-
-    Ok(result)
-}
-
-pub fn find_feed_links(feed_id: i32) -> AppResult<Vec<Link>> {
-    let conn = &mut connect()?;
-
-    let result = feed::table
-        .inner_join(feed_link::table.inner_join(link::table))
-        .filter(feed::id.eq(feed_id))
-        .select(Link::as_select())
-        .get_results(conn)?;
+pub async fn select_entry(conn: &mut SqliteConnection, entry_id: &i64) -> AppResult<Entry> {
+    let result = query_as!(
+        Entry,
+        r#"
+        SELECT *
+        FROM entry
+        WHERE entry.id = $1
+        "#,
+        entry_id
+    )
+    .fetch_one(&mut *conn)
+    .await?;
 
     Ok(result)
 }
 
-pub fn find_feed_authors(feed_id: i32) -> AppResult<Vec<Author>> {
-    let conn = &mut connect()?;
-
-    let result = feed::table
-        .inner_join(feed_author::table.inner_join(author::table))
-        .filter(feed::id.eq(feed_id))
-        .select(Author::as_select())
-        .get_results(conn)?;
-
-    Ok(result)
-}
-
-pub fn find_feed_categories(feed_id: i32) -> AppResult<Vec<Category>> {
-    let conn = &mut connect()?;
-
-    let result = feed::table
-        .inner_join(feed_category::table.inner_join(category::table))
-        .filter(feed::id.eq(feed_id))
-        .select(Category::as_select())
-        .get_results(conn)?;
+pub async fn select_content(conn: &mut SqliteConnection, content_id: &i64) -> AppResult<Content> {
+    let result = query_as!(
+        Content,
+        r#"
+        SELECT *
+        FROM content
+        WHERE content.id = $1
+        "#,
+        content_id
+    )
+    .fetch_one(&mut *conn)
+    .await?;
 
     Ok(result)
 }
 
-pub fn find_entry_links(entry_id: i32) -> AppResult<Vec<Link>> {
-    let conn = &mut connect()?;
-
-    let result = entry::table
-        .inner_join(entry_link::table.inner_join(link::table))
-        .filter(entry::id.eq(entry_id))
-        .select(Link::as_select())
-        .get_results(conn)?;
-
-    Ok(result)
-}
-
-pub fn find_entry_authors(entry_id: i32) -> AppResult<Vec<Author>> {
-    let conn = &mut connect()?;
-
-    let result = entry::table
-        .inner_join(entry_author::table.inner_join(author::table))
-        .filter(entry::id.eq(entry_id))
-        .select(Author::as_select())
-        .get_results(conn)?;
+pub async fn select_all_feed_links(
+    conn: &mut SqliteConnection,
+    feed_id: &i64,
+) -> AppResult<Vec<Link>> {
+    let result = query_as!(
+        Link,
+        r#"
+        SELECT link.id, link.href, link.rel, link.media_type, link.href_lang, link.title, link.length
+        FROM link
+        JOIN feed_link ON link.id = feed_link.link_id
+        JOIN feed ON feed.id = feed_link.feed_id
+        WHERE feed.id = $1
+        "#,
+        feed_id
+    )
+    .fetch_all(&mut *conn)
+    .await?;
 
     Ok(result)
 }
 
-pub fn find_entry_categories(entry_id: i32) -> AppResult<Vec<Category>> {
-    let conn = &mut connect()?;
-
-    let result = entry::table
-        .inner_join(entry_category::table.inner_join(category::table))
-        .filter(entry::id.eq(entry_id))
-        .select(Category::as_select())
-        .get_results(conn)?;
-
-    Ok(result)
-}
-
-pub fn find_media_links(media_id: i32) -> AppResult<Vec<Link>> {
-    let conn = &mut connect()?;
-
-    let result = media::table
-        .inner_join(media_link::table.inner_join(link::table))
-        .filter(media::id.eq(media_id))
-        .select(Link::as_select())
-        .get_results(conn)?;
+pub async fn select_all_feed_authors(
+    conn: &mut SqliteConnection,
+    feed_id: &i64,
+) -> AppResult<Vec<Author>> {
+    let result = query_as!(
+        Author,
+        r#"
+        SELECT author.id, author.name, author.uri, author.email
+        FROM author
+        JOIN feed_author ON author.id = feed_author.author_id
+        JOIN feed ON feed.id = feed_author.feed_id
+        WHERE feed.id = $1
+        "#,
+        feed_id
+    )
+    .fetch_all(&mut *conn)
+    .await?;
 
     Ok(result)
 }
 
-pub fn get_entries(curr_feed: &Feed) -> AppResult<Vec<Entry>> {
-    let conn = &mut connect()?;
+pub async fn select_all_feed_categories(
+    conn: &mut SqliteConnection,
+    feed_id: &i64,
+) -> AppResult<Vec<Category>> {
+    let result = query_as!(
+        Category,
+        r#"
+        SELECT category.id, category.term, category.scheme, category.label
+        FROM category
+        JOIN feed_category ON category.id = feed_category.category_id
+        JOIN feed ON feed.id = feed_category.feed_id
+        WHERE feed.id = $1
+        "#,
+        feed_id
+    )
+    .fetch_all(&mut *conn)
+    .await?;
 
-    let feed_id = feed::table
-        .filter(feed::title.eq(&curr_feed.title))
-        .select(Feed::as_select())
-        .get_result(conn)?;
+    Ok(result)
+}
 
-    let entries = Entry::belonging_to(&feed_id)
-        .select(Entry::as_select())
-        .load(conn)?;
+pub async fn select_all_entry_links(
+    conn: &mut SqliteConnection,
+    entry_id: &i64,
+) -> AppResult<Vec<Link>> {
+    let result = query_as!(
+        Link,
+        r#"
+        SELECT link.id, link.href, link.rel, link.media_type, link.href_lang, link.title, link.length
+        FROM link
+        JOIN entry_link ON link.id = entry_link.link_id
+        JOIN entry ON entry.id = entry_link.entry_id
+        WHERE entry.id = $1
+        "#,
+        entry_id
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+
+    Ok(result)
+}
+
+pub async fn select_all_entry_authors(
+    conn: &mut SqliteConnection,
+    entry_id: &i64,
+) -> AppResult<Vec<Author>> {
+    let result = query_as!(
+        Author,
+        r#"
+        SELECT author.id, author.name, author.uri, author.email
+        FROM author
+        JOIN entry_author ON author.id = entry_author.author_id
+        JOIN entry ON entry.id = entry_author.entry_id
+        WHERE entry.id = $1
+        "#,
+        entry_id
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+
+    Ok(result)
+}
+
+pub async fn select_all_entry_categories(
+    conn: &mut SqliteConnection,
+    entry_id: &i64,
+) -> AppResult<Vec<Category>> {
+    let result = query_as!(
+        Category,
+        r#"
+        SELECT category.id, category.term, category.scheme, category.label
+        FROM category
+        JOIN entry_category ON category.id = entry_category.category_id
+        JOIN entry ON entry.id = entry_category.entry_id
+        WHERE entry.id = $1
+        "#,
+        entry_id
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+
+    Ok(result)
+}
+
+pub async fn select_all_media_links(
+    conn: &mut SqliteConnection,
+    media_id: &i64,
+) -> AppResult<Vec<Link>> {
+    let result = query_as!(
+        Link,
+        r#"
+        SELECT link.id, link.href, link.rel, link.media_type, link.href_lang, link.title, link.length
+        FROM link
+        JOIN media_link ON link.id = media_link.link_id
+        JOIN media ON media.id = media_link.media_id
+        WHERE media.id = $1
+        "#,
+        media_id
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+
+    Ok(result)
+}
+
+pub async fn select_all_entries(
+    conn: &mut SqliteConnection,
+    feed_id: &i64,
+) -> AppResult<Vec<Entry>> {
+    let entries = query_as!(
+        Entry,
+        r#"
+        SELECT entry.id, entry.feed_id, entry.title, entry.updated, entry.content_id, entry.media_id, entry.summary, entry.source, entry.read
+        FROM entry
+        JOIN feed ON feed.id = entry.feed_id
+        WHERE feed.id = $1
+        "#,
+        feed_id
+    )
+    .fetch_all(&mut *conn)
+    .await?;
 
     Ok(entries)
 }
 
-pub fn select_entries(feed_id: i32) -> AppResult<Vec<Entry>> {
-    let conn = &mut connect()?;
-
-    let entries = entry::table
-        .filter(entry::feed_id.eq(feed_id))
-        .select(Entry::as_select())
-        .load(conn)?;
-
-    Ok(entries)
-}
-
-pub fn mark_entry_read(entry_id: i32) -> AppResult<()> {
-    let conn = &mut connect()?;
-
-    diesel::update(entry::table.filter(entry::id.eq(entry_id)))
-        .set(entry::read.eq(true))
-        .execute(conn)?;
+pub async fn mark_entry_read(conn: &mut SqliteConnection, entry_id: &i64) -> AppResult<()> {
+    query!(
+        r#"
+        UPDATE entry
+        SET read = true
+        WHERE entry.id = $1
+        "#,
+        entry_id
+    )
+    .execute(&mut *conn)
+    .await?;
 
     Ok(())
 }
 
-fn insert_entries(
+async fn insert_entries(
     conn: &mut SqliteConnection,
     entries: Vec<model::Entry>,
-    feed_id: i32,
+    feed_id: i64,
 ) -> AppResult<()> {
     let mut builder = EntryBuilder::new();
 
     for entry in entries.iter().rev() {
-        let possible_entries: Vec<Entry> = entry::table
-            .filter(entry::title.eq(entry.title.clone().unwrap().content))
-            .select(Entry::as_select())
-            .get_results(conn)?;
+        let content_id = insert_content(conn, entry.content.clone()).await?;
 
-        if possible_entries.len() > 0 {
-            continue;
-        }
-
-        let content_id = insert_content(conn, entry.content.clone())?;
-
-        let media_id = insert_media(conn, entry.media.first().cloned())?;
+        let media_id = insert_media(conn, entry.media.first().cloned()).await?;
 
         let new_entry = builder
             .feed_id(feed_id)
@@ -439,24 +564,81 @@ fn insert_entries(
             .source(entry.source.clone())
             .build()?;
 
-        let ret_entry: Entry = diesel::insert_into(entry::table)
-            .values(&new_entry)
-            .returning(Entry::as_returning())
-            .get_result(conn)?;
+        let possible_entries = query_as!(
+            Entry,
+            r#"
+            SELECT *
+            FROM entry
+            WHERE entry.title = ?
+            "#,
+            new_entry.title
+        )
+        .fetch_all(&mut *conn)
+        .await?;
 
-        insert_authors(conn, entry.authors.clone(), None, Some(ret_entry.id))?;
-        insert_links(conn, entry.links.clone(), None, Some(ret_entry.id))?;
-        insert_categories(conn, entry.categories.clone(), None, Some(ret_entry.id))?;
+        if possible_entries.is_empty() {
+            query!(
+                r#"
+                INSERT INTO entry (feed_id, title, updated, content_id, media_id, summary, source)
+                VALUES (
+                    (SELECT id FROM feed WHERE feed.id = $1),
+                    $2,
+                    $3,
+                    (SELECT id FROM content WHERE content.id = $4),
+                    (SELECT id FROM media WHERE media.id = $5),
+                    $6,
+                    $7
+                )
+                "#,
+                new_entry.feed_id,
+                new_entry.title,
+                new_entry.updated,
+                new_entry.content_id,
+                new_entry.media_id,
+                new_entry.summary,
+                new_entry.source
+            )
+            .execute(&mut *conn)
+            .await?;
+
+            let ret_entry = query_as!(
+                Entry,
+                r#"
+                SELECT *
+                FROM entry
+                WHERE entry.feed_id = $1
+                AND entry.title = $2
+                AND entry.updated = $3
+                AND entry.content_id = $4
+                AND entry.media_id = $5
+                AND entry.summary = $6
+                AND entry.source = $7
+                "#,
+                new_entry.feed_id,
+                new_entry.title,
+                new_entry.updated,
+                new_entry.content_id,
+                new_entry.media_id,
+                new_entry.summary,
+                new_entry.source
+            )
+            .fetch_one(&mut *conn)
+            .await?;
+
+            insert_authors(conn, entry.authors.clone(), None, Some(ret_entry.id)).await?;
+            insert_links(conn, entry.links.clone(), None, Some(ret_entry.id)).await?;
+            insert_categories(conn, entry.categories.clone(), None, Some(ret_entry.id)).await?;
+        }
     }
 
     Ok(())
 }
 
-fn insert_authors(
+async fn insert_authors(
     conn: &mut SqliteConnection,
     authors: Vec<model::Person>,
-    feed_id: Option<i32>,
-    entry_id: Option<i32>,
+    feed_id: Option<i64>,
+    entry_id: Option<i64>,
 ) -> AppResult<()> {
     let mut builder = AuthorBuilder::new();
 
@@ -467,44 +649,75 @@ fn insert_authors(
             .email(person.email)
             .build()?;
 
-        let ret_author: Author = diesel::insert_into(author::table)
-            .values(&new_author)
-            .returning(Author::as_returning())
-            .get_result(conn)?;
+        query!(
+            r#"
+            INSERT INTO author (name, uri, email)
+            VALUES ($1, $2, $3)
+            "#,
+            new_author.name,
+            new_author.uri,
+            new_author.email
+        )
+        .execute(&mut *conn)
+        .await?;
+
+        let ret_author = query_as!(
+            Author,
+            r#"
+            SELECT *
+            FROM author
+            WHERE author.name = ?
+            "#,
+            new_author.name
+        )
+        .fetch_one(&mut *conn)
+        .await?;
 
         let Some(f_id) = feed_id else {
             let Some(e_id) = entry_id else {
                 return Err(Error::Static("Orphaned Author"));
             };
 
-            let mut ea_builder = EntryAuthorBuilder::new();
-
-            let entry_author = ea_builder.author_id(ret_author.id).entry_id(e_id).build()?;
-
-            diesel::insert_into(entry_author::table)
-                .values(&entry_author)
-                .execute(conn)?;
+            query!(
+                r#"
+                INSERT INTO entry_author (author_id, entry_id)
+                VALUES (
+                    (SELECT id FROM author WHERE author.id = $1),
+                    (SELECT id FROM entry WHERE entry.id = $2)
+                )
+                "#,
+                ret_author.id,
+                e_id
+            )
+            .execute(&mut *conn)
+            .await?;
 
             continue;
         };
 
-        let mut fa_builder = FeedAuthorBuilder::new();
-
-        let feed_author = fa_builder.author_id(ret_author.id).feed_id(f_id).build()?;
-
-        diesel::insert_into(feed_author::table)
-            .values(&feed_author)
-            .execute(conn)?;
+        query!(
+            r#"
+            INSERT INTO feed_author (author_id, feed_id)
+            VALUES (
+                (SELECT id FROM author WHERE author.id = $1),
+                (SELECT id FROM feed WHERE feed.id = $2)
+            )
+            "#,
+            ret_author.id,
+            f_id
+        )
+        .execute(&mut *conn)
+        .await?;
     }
 
     Ok(())
 }
 
-pub fn insert_links(
+pub async fn insert_links(
     conn: &mut SqliteConnection,
     links: Vec<model::Link>,
-    feed_id: Option<i32>,
-    entry_id: Option<i32>,
+    feed_id: Option<i64>,
+    entry_id: Option<i64>,
 ) -> AppResult<()> {
     let mut builder = LinkBuilder::new();
 
@@ -518,40 +731,74 @@ pub fn insert_links(
             .length(link.length)
             .build()?;
 
-        let ret_link: Link = diesel::insert_into(link::table)
-            .values(&new_link)
-            .returning(Link::as_returning())
-            .get_result(conn)?;
+        query!(
+            r#"
+            INSERT INTO link (href, rel, media_type, href_lang, title, length)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            "#,
+            new_link.href,
+            new_link.rel,
+            new_link.media_type,
+            new_link.href_lang,
+            new_link.title,
+            new_link.length
+        )
+        .execute(&mut *conn)
+        .await?;
+
+        let ret_link = query_as!(
+            Link,
+            r#"
+            SELECT *
+            FROM link
+            WHERE link.href = ?
+            "#,
+            new_link.href
+        )
+        .fetch_one(&mut *conn)
+        .await?;
 
         let Some(f_id) = feed_id else {
             let Some(e_id) = entry_id else {
                 return Err(Error::Static("Orphaned Link"));
             };
 
-            let mut el_builder = EntryLinkBuilder::new();
-
-            let entry_link = el_builder.link_id(ret_link.id).entry_id(e_id).build()?;
-
-            diesel::insert_into(entry_link::table)
-                .values(&entry_link)
-                .execute(conn)?;
+            query!(
+                r#"
+                insert into entry_link (link_id, entry_id)
+                VALUES (
+                    (SELECT id FROM link WHERE link.id = $1),
+                    (SELECT id FROM entry WHERE entry.id = $2)
+                );
+                "#,
+                ret_link.id,
+                e_id
+            )
+            .execute(&mut *conn)
+            .await?;
 
             continue;
         };
 
-        let mut fl_builder = FeedLinkBuilder::new();
-
-        let feed_link = fl_builder.link_id(ret_link.id).feed_id(f_id).build()?;
-
-        diesel::insert_into(feed_link::table)
-            .values(&feed_link)
-            .execute(conn)?;
+        query!(
+            r#"
+            insert into feed_link (link_id, feed_id)
+            values (
+                (SELECT id FROM link WHERE link.id = $1),
+                (SELECT id FROM feed WHERE feed.id = $2)
+            );
+            "#,
+            ret_link.id,
+            f_id
+        )
+        .execute(&mut *conn)
+        .await?;
     }
 
     if entry_id.is_some() {
         let e_id = entry_id.unwrap();
 
-        let content_links = get_content_links(e_id);
+        let content_links = select_all_content_links(conn, e_id).await?;
 
         for link_string in content_links {
             insert_link(conn, link_string, None, Some(e_id))?;
@@ -561,11 +808,11 @@ pub fn insert_links(
     Ok(())
 }
 
-pub fn insert_link(
+pub async fn insert_link(
     conn: &mut SqliteConnection,
     link: String,
-    feed_id: Option<i32>,
-    entry_id: Option<i32>,
+    feed_id: Option<i64>,
+    entry_id: Option<i64>,
 ) -> AppResult<()> {
     let mut builder = LinkBuilder::new();
 
@@ -574,41 +821,85 @@ pub fn insert_link(
         .length(Some(link.len() as u64))
         .build()?;
 
-    let ret_link: Link = diesel::insert_into(link::table)
-        .values(&new_link)
-        .returning(Link::as_returning())
-        .get_result(conn)?;
+    query!(
+        r#"
+        INSERT INTO link (href, rel, media_type, href_lang, title, length)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#,
+        new_link.href,
+        new_link.rel,
+        new_link.media_type,
+        new_link.href_lang,
+        new_link.title,
+        new_link.length
+    )
+    .execute(&mut *conn)
+    .await?;
+
+    let ret_link = query_as!(
+        Link,
+        r#"
+        SELECT *
+        FROM link
+        WHERE link.href = $1
+        AND link.rel = $2
+        AND link.media_type = $3
+        AND link.href_lang = $4
+        AND link.title = $5
+        AND link.length = $6
+        "#,
+        new_link.href,
+        new_link.rel,
+        new_link.media_type,
+        new_link.href_lang,
+        new_link.title,
+        new_link.length
+    )
+    .fetch_one(&mut *conn)
+    .await?;
 
     if let Some(f_id) = feed_id {
-        let mut fl_builder = FeedLinkBuilder::new();
-
-        let feed_link = fl_builder.link_id(ret_link.id).feed_id(f_id).build()?;
-
-        diesel::insert_into(feed_link::table)
-            .values(&feed_link)
-            .execute(conn)?;
+        query!(
+            r#"
+            insert into feed_link (link_id, feed_id)
+            values (
+                (SELECT id FROM link WHERE link.id = $1),
+                (SELECT id FROM feed WHERE feed.id = $2)
+            );
+            "#,
+            ret_link.id,
+            f_id
+        )
+        .execute(&mut *conn)
+        .await?;
     } else {
         let Some(e_id) = entry_id else {
             return Err(Error::Static("Orphaned Link"));
         };
 
-        let mut el_builder = EntryLinkBuilder::new();
-
-        let entry_link = el_builder.link_id(ret_link.id).entry_id(e_id).build()?;
-
-        diesel::insert_into(entry_link::table)
-            .values(&entry_link)
-            .execute(conn)?;
+        query!(
+            r#"
+            insert into entry_link (link_id, entry_id)
+            VALUES (
+                (SELECT id FROM link WHERE link.id = $1),
+                (SELECT id FROM entry WHERE entry.id = $2)
+            );
+            "#,
+            ret_link.id,
+            e_id
+        )
+        .execute(&mut *conn)
+        .await?;
     }
 
     Ok(())
 }
 
-fn insert_categories(
+async fn insert_categories(
     conn: &mut SqliteConnection,
     categories: Vec<model::Category>,
-    feed_id: Option<i32>,
-    entry_id: Option<i32>,
+    feed_id: Option<i64>,
+    entry_id: Option<i64>,
 ) -> AppResult<()> {
     let mut builder = CategoryBuilder::new();
 
@@ -619,49 +910,78 @@ fn insert_categories(
             .label(category.label)
             .build()?;
 
-        let ret_category: Category = diesel::insert_into(category::table)
-            .values(&new_category)
-            .returning(Category::as_returning())
-            .get_result(conn)?;
+        query!(
+            r#"
+            INSERT INTO category (term, scheme, label)
+            VALUES ($1, $2, $3)
+            "#,
+            new_category.term,
+            new_category.scheme,
+            new_category.label
+        )
+        .execute(&mut *conn)
+        .await?;
+
+        let ret_category = query_as!(
+            Category,
+            r#"
+            SELECT *
+            FROM category
+            WHERE category.term = $1
+            AND category.scheme = $2
+            AND category.label = $3
+            "#,
+            new_category.term,
+            new_category.scheme,
+            new_category.label
+        )
+        .fetch_one(&mut *conn)
+        .await?;
 
         let Some(f_id) = feed_id else {
             let Some(e_id) = entry_id else {
                 return Err(Error::Static("Orphaned Category"));
             };
 
-            let mut ec_builder = EntryCategoryBuilder::new();
-
-            let entry_category = ec_builder
-                .category_id(ret_category.id)
-                .entry_id(e_id)
-                .build()?;
-
-            diesel::insert_into(entry_category::table)
-                .values(&entry_category)
-                .execute(conn)?;
+            query!(
+                r#"
+                INSERT INTO entry_category (category_id, entry_id)
+                VALUES (
+                    (SELECT id FROM category WHERE category.id = $1),
+                    (SELECT id FROM entry WHERE entry.id = $2)
+                )
+                "#,
+                ret_category.id,
+                e_id
+            )
+            .execute(&mut *conn)
+            .await?;
 
             continue;
         };
 
-        let mut fc_builder = FeedCategoryBuilder::new();
-
-        let feed_category = fc_builder
-            .category_id(ret_category.id)
-            .feed_id(f_id)
-            .build()?;
-
-        diesel::insert_into(feed_category::table)
-            .values(&feed_category)
-            .execute(conn)?;
+        query!(
+            r#"
+            INSERT INTO feed_category (category_id, feed_id)
+            VALUES (
+                (SELECT id FROM category WHERE category.id = $1),
+                (SELECT id FROM feed WHERE feed.id = $2)
+            )
+            "#,
+            ret_category.id,
+            f_id
+        )
+        .execute(&mut *conn)
+        .await?;
     }
 
     Ok(())
 }
 
-fn insert_content(
+async fn insert_content(
     conn: &mut SqliteConnection,
     content_opt: Option<model::Content>,
-) -> AppResult<Option<i32>> {
+) -> AppResult<Option<i64>> {
     let Some(content) = content_opt else {
         return Ok(None);
     };
@@ -676,10 +996,34 @@ fn insert_content(
             .src(None)
             .build()?;
 
-        let ret_content = diesel::insert_into(content::table)
-            .values(&new_content)
-            .returning(Content::as_returning())
-            .get_result(conn)?;
+        query!(
+            r#"
+            INSERT INTO content (body, content_type, length, src)
+            VALUES ($1, $2, $3, (SELECT id FROM link WHERE link.href = $4))
+            "#,
+            new_content.body,
+            new_content.content_type,
+            new_content.length,
+            new_content.src
+        )
+        .execute(&mut *conn)
+        .await?;
+
+        let ret_content = query_as!(
+            Content,
+            r#"
+            SELECT *
+            FROM content
+            WHERE content.body = ?
+            AND content.content_type = ?
+            AND content.src = ?
+            "#,
+            new_content.body,
+            new_content.content_type,
+            new_content.src
+        )
+        .fetch_one(&mut *conn)
+        .await?;
 
         return Ok(Some(ret_content.id));
     };
@@ -696,10 +1040,42 @@ fn insert_content(
         .length(link.length)
         .build()?;
 
-    let ret_link: Link = diesel::insert_into(link::table)
-        .values(&new_link)
-        .returning(Link::as_returning())
-        .get_result(conn)?;
+    query!(
+        r#"
+        INSERT INTO link (href, rel, media_type, href_lang, title, length)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#,
+        new_link.href,
+        new_link.rel,
+        new_link.media_type,
+        new_link.href_lang,
+        new_link.title,
+        new_link.length
+    )
+    .execute(&mut *conn)
+    .await?;
+
+    let ret_link = query_as!(
+        Link,
+        r#"
+        SELECT *
+        FROM link
+        WHERE link.href = $1
+        AND link.rel = $2
+        AND link.media_type = $3
+        AND link.href_lang = $4
+        AND link.title = $5
+        AND link.length = $6
+        "#,
+        new_link.href,
+        new_link.rel,
+        new_link.media_type,
+        new_link.href_lang,
+        new_link.title,
+        new_link.length
+    )
+    .fetch_one(&mut *conn)
+    .await?;
 
     let new_content = con_builder
         .body(content.body)
@@ -708,49 +1084,84 @@ fn insert_content(
         .src(Some(ret_link.id))
         .build()?;
 
-    let ret_content = diesel::insert_into(content::table)
-        .values(&new_content)
-        .returning(Content::as_returning())
-        .get_result(conn)?;
+    query!(
+        r#"
+        INSERT INTO content (body, content_type, length, src)
+        VALUES ($1, $2, $3, $4)
+        "#,
+        new_content.body,
+        new_content.content_type,
+        new_content.length,
+        None
+    )
+    .execute(&mut *conn)
+    .await?;
+
+    let ret_content = query_as!(
+        Content,
+        r#"
+        SELECT *
+        FROM content
+        WHERE content.body = $1
+        AND content.content_type = $2
+        AND content.src = $3
+        "#,
+        new_content.body,
+        new_content.content_type,
+        new_content.src
+    )
+    .fetch_one(&mut *conn)
+    .await?;
 
     Ok(Some(ret_content.id))
 }
 
-pub fn insert_media(
+pub async fn insert_media(
     conn: &mut SqliteConnection,
     media: Option<model::MediaObject>,
-) -> AppResult<Option<i32>> {
+) -> AppResult<Option<i64>> {
     let Some(media) = media else {
         return Ok(None);
     };
 
     let mut media_builder = MediaBuilder::new();
 
-    let Some(thumbnail) = media.thumbnails.first() else {
-        let new_media = media_builder
-            .title(media.title)
-            .thumbnail(None)
-            .description(media.description)
-            .build()?;
-
-        let ret_media = diesel::insert_into(media::table)
-            .values(&new_media)
-            .returning(Media::as_returning())
-            .get_result(conn)?;
-
-        return Ok(Some(ret_media.id));
-    };
-
     let new_media = media_builder
         .title(media.title)
-        .thumbnail(Some(thumbnail.image.uri.clone()))
+        .thumbnail(match media.thumbnails.first() {
+            Some(thumbnail) => Some(thumbnail.image.uri.clone()),
+            None => None,
+        })
         .description(media.description)
         .build()?;
 
-    let ret_media = diesel::insert_into(media::table)
-        .values(&new_media)
-        .returning(Media::as_returning())
-        .get_result(conn)?;
+    query!(
+        r#"
+        INSERT INTO media (title, thumbnail, description)
+        VALUES ($1, $2, $3)
+        "#,
+        new_media.title,
+        new_media.thumbnail,
+        new_media.description
+    )
+    .execute(&mut *conn)
+    .await?;
+
+    let ret_media = query_as!(
+        Media,
+        r#"
+        SELECT *
+        FROM MEDIA
+        WHERE title = $1
+        AND thumbnail = $2
+        AND description = $3
+        "#,
+        new_media.title,
+        new_media.thumbnail,
+        new_media.description
+    )
+    .fetch_one(&mut *conn)
+    .await?;
 
     for media_content in media.content.iter() {
         if let Some(link) = &media_content.url {
@@ -758,163 +1169,335 @@ pub fn insert_media(
 
             let new_link = link_builder.href(link.to_string()).build()?;
 
-            let ret_link = diesel::insert_into(link::table)
-                .values(&new_link)
-                .returning(Link::as_returning())
-                .get_result(conn)?;
+            query!(
+                r#"
+                INSERT INTO link (href, rel, media_type, href_lang, title, length)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#,
+                new_link.href,
+                new_link.rel,
+                new_link.media_type,
+                new_link.href_lang,
+                new_link.title,
+                new_link.length
+            )
+            .execute(&mut *conn)
+            .await?;
 
-            let mut media_link_builder = MediaLinkBuilder::new();
+            let ret_link = query_as!(
+                Link,
+                r#"
+                SELECT *
+                FROM link
+                WHERE link.href = $1
+                AND link.rel = $2
+                AND link.media_type = $3
+                AND link.href_lang = $4
+                AND link.title = $5
+                AND link.length = $6
+                "#,
+                new_link.href,
+                new_link.rel,
+                new_link.media_type,
+                new_link.href_lang,
+                new_link.title,
+                new_link.length
+            )
+            .fetch_one(&mut *conn)
+            .await?;
 
-            let new_media_link = media_link_builder
-                .link_id(ret_link.id)
-                .media_id(ret_media.id)
-                .build()?;
-
-            diesel::insert_into(media_link::table)
-                .values(&new_media_link)
-                .execute(conn)?;
+            query!(
+                r#"
+                INSERT INTO media_link (link_id, media_id)
+                VALUES (
+                    (SELECT id FROM link WHERE link.id = $1),
+                    (SELECT id FROM media WHERE media.id = $2)
+                )
+                "#,
+                ret_link.id,
+                ret_media.id
+            )
         }
     }
 
     return Ok(Some(ret_media.id));
 }
 
-pub fn select_media(media_id: &i32) -> AppResult<Media> {
-    let conn = &mut connect()?;
-
-    let result = media::table
-        .filter(media::id.eq(media_id))
-        .select(Media::as_select())
-        .get_result(conn)?;
+pub async fn select_media(conn: &mut SqliteConnection, media_id: &i64) -> AppResult<Media> {
+    let result = query_as!(
+        Media,
+        r#"
+        SELECT *
+        FROM media
+        WHERE media.id = $1
+        "#,
+        media_id
+    )
+    .fetch_one(&mut *conn)
+    .await?;
 
     Ok(result)
 }
 
-pub fn delete_feed(feed_id: i32) -> AppResult<()> {
+pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult<()> {
     // Get all the entries for the feed
     // delete each entry's link, content and author
     // delete the entries, author, link, and category of the feed
     // delete the feed
 
-    let conn = &mut connect()?;
-    let feed = select_feed(&feed_id)?;
-    let entries = get_entries(&feed)?;
+    let entries = select_all_entries(conn, &feed_id).await?;
 
     for entry in entries {
-        delete_entry(entry.id)?;
+        delete_entry(conn, entry.id).await?;
     }
 
-    if let Ok(links) = find_feed_links(feed_id) {
+    if let Ok(links) = select_all_feed_links(feed_id).await? {
         for link in links {
-            diesel::delete(feed_link::table.filter(feed_link::feed_id.eq(feed_id)))
-                .execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM feed_link
+                WHERE feed_link.link_id = $1
+                AND feed_link.feed_id = $2
+                "#,
+                link.id,
+                feed_id
+            )
+            .execute(&mut *conn)
+            .await?;
 
-            diesel::delete(link::table.filter(link::id.eq(link.id))).execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM link
+                WHERE link.id = $1
+                "#,
+                link.id
+            )
+            .execute(&mut *conn)
+            .await?;
         }
     }
 
-    if let Ok(authors) = find_feed_authors(feed_id) {
+    if let Ok(authors) = select_all_feed_authors(feed_id).await? {
         for author in authors {
-            diesel::delete(feed_author::table.filter(feed_author::feed_id.eq(feed_id)))
-                .execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM feed_author
+                WHERE feed_author.author_id = $1
+                AND feed_author.feed_id = $2
+                "#,
+                author.id,
+                feed_id
+            )
+            .execute(&mut *conn)
+            .await?;
 
-            diesel::delete(author::table.filter(author::id.eq(author.id))).execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM author
+                WHERE author.id = $1
+                "#,
+                author.id
+            )
+            .execute(&mut *conn)
+            .await?;
         }
     }
 
-    if let Ok(categories) = find_feed_categories(feed_id) {
+    if let Ok(categories) = select_all_feed_categories(feed_id).await? {
         for category in categories {
-            diesel::delete(feed_category::table.filter(feed_category::feed_id.eq(feed_id)))
-                .execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM feed_category
+                WHERE feed_category.category_id = $1
+                AND feed_category.feed_id = $2
+                "#,
+                category.id,
+                feed_id
+            )
+            .execute(&mut *conn)
+            .await?;
 
-            diesel::delete(category::table.filter(category::id.eq(category.id))).execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM category
+                WHERE category.id = $1
+                "#,
+                category.id
+            )
+            .execute(&mut *conn)
+            .await?;
         }
     }
 
-    diesel::delete(feed::table.filter(feed::id.eq(feed_id))).execute(conn)?;
+    query!(
+        r#"
+        DELETE FROM feed
+        WHERE feed.id = $1
+        "#,
+        feed_id
+    )
+    .execute(&mut *conn)
+    .await?;
 
     Ok(())
 }
 
-pub fn delete_entry(entry_id: i32) -> AppResult<()> {
+pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResult<()> {
     // Get the entry
     // delete the entry's link, content and author
     // delete the entry
 
-    let conn = &mut connect()?;
-    let entry = select_entry(&entry_id)?;
+    let entry = select_entry(conn, &entry_id).await?;
 
-    if let Ok(links) = find_entry_links(entry.id) {
+    if let Ok(links) = select_all_entry_links(entry.id).await? {
         for link in links {
-            diesel::delete(entry_link::table.filter(entry_link::entry_id.eq(entry.id)))
-                .execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM entry_link
+                WHERE entry_link.link_id = $1
+                AND entry_link.entry_id = $2
+                "#,
+                link.id,
+                entry.id
+            )
+            .execute(&mut *conn)
+            .await?;
 
-            diesel::delete(link::table.filter(link::id.eq(link.id))).execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM link
+                WHERE link.id = $1
+                "#,
+                link.id
+            )
+            .execute(&mut *conn)
+            .await?;
         }
     }
-    if let Ok(authors) = find_entry_authors(entry.id) {
+    if let Ok(authors) = select_all_entry_authors(entry.id).await? {
         for author in authors {
-            diesel::delete(entry_author::table.filter(entry_author::entry_id.eq(entry.id)))
-                .execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM entry_author
+                WHERE entry_author.author_id = $1
+                AND entry_author.entry_id = $2
+                "#,
+                authors.id,
+                entry.id
+            )
+            .execute(&mut *conn)
+            .await?;
 
-            diesel::delete(author::table.filter(author::id.eq(author.id))).execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM author
+                WHERE author.id = $1
+                "#,
+                author.id
+            )
+            .execute(&mut *conn)
+            .await?;
         }
     }
 
     if let Some(content_id) = entry.content_id {
-        diesel::delete(content::table.filter(content::id.eq(content_id))).execute(conn)?;
+        query!(
+            r#"
+            DELETE FROM content
+            WHERE content.id = $1
+            "#,
+            content_id
+        )
+        .execute(&mut *conn)
+        .await?;
     };
 
     if let Some(media_id) = entry.media_id {
-        if let Ok(media_links) = find_media_links(media_id) {
-            for media_link in media_links {
-                diesel::delete(media_link::table.filter(media_link::id.eq(media_link.id)))
-                    .execute(conn)?;
+        if let Ok(media_links) = select_all_media_links(media_id).await? {
+            for link in media_links {
+                query!(
+                    r#"
+                    DELETE FROM media_link
+                    WHERE media_link.link_id = $1
+                    AND media_link.media_id = $2
+                    "#,
+                    link.id,
+                    media_id
+                )
+                .execute(&mut *conn)
+                .await?;
             }
         }
 
-        diesel::delete(media_link::table.filter(media_link::media_id.eq(media_id)))
-            .execute(conn)?;
-
-        diesel::delete(media::table.filter(media::id.eq(media_id))).execute(conn)?;
+        query!(
+            r#"
+            DELETE FROM media
+            WHERE media.id = $1
+            "#,
+            media_id
+        )
+        .execute(&mut *conn)
+        .await?;
     };
 
-    if let Ok(categories) = find_entry_categories(entry.id) {
+    if let Ok(categories) = select_all_entry_categories(conn, entry.id).await? {
         for category in categories {
-            diesel::delete(entry_category::table.filter(entry_category::entry_id.eq(entry.id)))
-                .execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM entry_category
+                WHERE entry_category.category_id = $1
+                AND entry_category.entry_id = $2
+                "#,
+                category.id,
+                entry.id
+            )
+            .execute(&mut *conn)
+            .await?;
 
-            diesel::delete(category::table.filter(category::id.eq(category.id))).execute(conn)?;
+            query!(
+                r#"
+                DELETE FROM category
+                WHERE category.id = $1
+                "#,
+                category.id
+            )
+            .execute(&mut *conn)
+            .await?;
         }
     }
 
-    diesel::delete(entry::table.filter(entry::id.eq(entry.id))).execute(conn)?;
+    query!(
+        r#"
+        DELETE FROM entry
+        WHERE entry.id = $1
+        "#,
+        entry.id
+    )
+    .execute(&mut *conn)
+    .await?;
 
     Ok(())
 }
 
-fn get_content_links(entry_id: i32) -> Vec<String> {
-    if let Ok(entry) = select_entry(&entry_id) {
+async fn select_all_content_links(
+    conn: &mut SqliteConnection,
+    entry_id: i64,
+) -> AppResult<Vec<String>> {
+    if let Ok(entry) = select_entry(conn, &entry_id).await? {
         if let Some(content_id) = &entry.content_id {
-            if let Ok(content) = select_content(content_id) {
+            if let Ok(content) = select_content(conn, content_id).await? {
                 if let Some(body) = &content.body {
-                    return extract_links(body);
-                } else {
-                    return vec![];
+                    return Ok(extract_links(body));
                 }
-            } else {
-                return vec![];
             }
         } else {
             if let Some(summary) = &entry.summary {
-                return extract_links(summary);
-            } else {
-                return vec![];
+                return Ok(extract_links(summary));
             }
         }
-    } else {
-        return vec![];
     }
+
+    Ok(vec![])
 }
 
 fn extract_links(html: &str) -> Vec<String> {
@@ -971,9 +1554,4 @@ fn extract_links(html: &str) -> Vec<String> {
     }
 
     links
-}
-
-#[test]
-fn delete_entry_test() {
-    assert!(delete_entry(25).is_ok());
 }

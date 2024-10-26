@@ -9,10 +9,7 @@ pub enum Error {
     Static(&'static str),
 
     #[error(transparent)]
-    Query(#[from] diesel::result::Error),
-
-    #[error(transparent)]
-    Connection(#[from] diesel::result::ConnectionError),
+    Connection(#[from] sqlx::Error),
 
     #[error(transparent)]
     EnvVar(#[from] std::env::VarError),

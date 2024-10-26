@@ -2,7 +2,7 @@ use super::components::*;
 use super::util::{parse_hex, parse_html};
 use super::{UiCallback, View};
 use crate::config::Settings;
-use crate::db::{find_entry_links, find_media_links, select_content, select_media};
+use crate::db::{select_all_entry_links, select_all_media_links, select_content, select_media};
 use crate::prelude::{Entry as EntryModel, Link};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent};
@@ -99,14 +99,14 @@ impl Entry {
 
     fn get_links(&mut self) {
         if let Some(entry) = &self.entry {
-            if let Ok(links) = find_entry_links(entry.id) {
+            if let Ok(links) = select_all_entry_links(entry.id) {
                 for link in links.iter() {
                     self.link_items.push(link.clone());
                 }
             }
 
             if let Some(media_id) = entry.media_id {
-                if let Ok(links) = find_media_links(media_id) {
+                if let Ok(links) = select_all_media_links(media_id) {
                     for link in links.iter() {
                         self.link_items.push(link.clone());
                     }

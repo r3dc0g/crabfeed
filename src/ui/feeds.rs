@@ -2,7 +2,7 @@ use crate::app::ActiveBlock;
 use crate::app::Route;
 use crate::app::RouteId;
 use crate::config::Settings;
-use crate::db::get_feeds;
+use crate::db::select_all_feeds;
 use crate::prelude::Feed;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
@@ -23,7 +23,7 @@ impl Feeds {
     pub fn new() -> Self {
         Self {
             list_state: ListState::default(),
-            feed_items: get_feeds().unwrap_or(vec![]),
+            feed_items: select_all_feeds().unwrap_or(vec![]),
             selected: false,
         }
     }
@@ -38,7 +38,7 @@ impl Feeds {
     }
 
     pub fn update_feeds(&mut self) {
-        self.feed_items = get_feeds().unwrap_or(vec![]);
+        self.feed_items = select_all_feeds().unwrap_or(vec![]);
     }
 }
 

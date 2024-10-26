@@ -3,7 +3,8 @@ use crate::{time::TIME_STEP, AppResult};
 use std::sync::mpsc;
 
 use crate::db::{
-    self, delete_feed, find_feed_links, get_feeds, insert_feed, insert_link, update_feed_title,
+    connect, delete_feed, insert_feed, insert_link, select_all_feed_links, select_all_feeds,
+    select_feed, update_feed_title,
 };
 use feed_rs::parser;
 use reqwest;
@@ -14,7 +15,8 @@ pub enum NetworkEvent {
     Updating(String),
     UpdateFeeds,
     AddFeed(String),
-    DeleteFeed(i32),
+    DeleteFeed(i64),
+    Deleting(String),
 }
 
 pub struct NetworkHandler {
@@ -73,7 +75,7 @@ impl NetworkHandler {
                 NetworkHandler::add_feed(url).await?;
             }
             NetworkEvent::DeleteFeed(id) => {
-                NetworkHandler::delete_feed(id).await?;
+                NetworkHandler::delete_feed(sender, id).await?;
             }
             _ => {}
         }
@@ -83,7 +85,9 @@ impl NetworkHandler {
 
     // Fetch feeds and update the app state
     async fn update_feeds(sender: mpsc::Sender<NetworkEvent>) -> AppResult<()> {
-        let feed_items = get_feeds()?;
+        let conn = &mut connect().await?;
+
+        let feed_items = select_all_feeds(conn).await?;
 
         let mut new_feeds = vec![];
 
@@ -93,7 +97,7 @@ impl NetworkHandler {
                 feed.title.clone().unwrap_or("Untitled Feed".to_string())
             )))?;
 
-            let links = find_feed_links(feed.id)?;
+            let links = select_all_feed_links(conn, &feed.id).await?;
 
             if links.is_empty() {
                 return Err(Error::Static("No links found for feed"));
@@ -108,7 +112,12 @@ impl NetworkHandler {
                             if let Some(new_title) = &neofeed.title {
                                 if let Some(old_title) = &feed.title {
                                     if new_title.content != *old_title {
-                                        update_feed_title(&feed.id, new_title.content.clone())?;
+                                        update_feed_title(
+                                            conn,
+                                            &feed.id,
+                                            new_title.content.clone(),
+                                        )
+                                        .await?;
                                     }
                                 }
                             }
@@ -119,11 +128,9 @@ impl NetworkHandler {
             }
         }
 
-        let connection = &mut db::connect()?;
-
         //Update the database
         for feed in new_feeds {
-            insert_feed(connection, feed)?;
+            insert_feed(conn, feed).await?;
         }
 
         Ok(())
@@ -135,17 +142,26 @@ impl NetworkHandler {
         let feed = parser::parse(content.as_bytes());
 
         if let Ok(feed) = feed {
-            let connection = &mut db::connect()?;
-            let feed_id = insert_feed(connection, feed)?;
+            let conn = &mut connect().await?;
+            let feed_id = insert_feed(conn, feed).await?;
 
-            insert_link(connection, feed_url, Some(feed_id), None)?;
+            insert_link(conn, feed_url, Some(feed_id), None).await?;
         }
 
         Ok(())
     }
 
-    async fn delete_feed(feed_id: i32) -> AppResult<()> {
-        delete_feed(feed_id)?;
+    async fn delete_feed(sender: mpsc::Sender<NetworkEvent>, feed_id: i64) -> AppResult<()> {
+        let conn = &mut connect().await?;
+
+        let feed = select_feed(conn, &feed_id).await?;
+
+        sender.send(NetworkEvent::Deleting(format!(
+            "Deleting {}...",
+            feed.title.unwrap_or("Untitled Feed".to_string())
+        )))?;
+
+        delete_feed(conn, feed_id).await?;
 
         Ok(())
     }
