@@ -1,4 +1,4 @@
-use crate::network::NetworkEvent;
+use crate::data::data::DataEvent;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -30,7 +30,7 @@ pub enum Error {
     HTMLParsing(#[from] html_parser::Error),
 
     #[error(transparent)]
-    SendError(#[from] std::sync::mpsc::SendError<NetworkEvent>),
+    SendError(#[from] std::sync::mpsc::SendError<DataEvent>),
 
     #[error(transparent)]
     RecvTimeout(#[from] std::sync::mpsc::RecvTimeoutError),

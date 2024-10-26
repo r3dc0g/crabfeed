@@ -1,31 +1,38 @@
 use crate::error::Error;
+use crate::prelude::{EntryData, FeedData};
 use crate::{time::TIME_STEP, AppResult};
 use std::sync::mpsc;
 
-use crate::db::{
-    connect, delete_feed, insert_feed, insert_link, select_all_feed_links, select_all_feeds,
-    select_feed, update_feed_title,
+use super::db::{
+    connect, delete_feed, insert_feed, insert_link, mark_entry_read, select_all_entries,
+    select_all_entry_links, select_all_feed_links, select_all_feeds, select_feed,
+    update_feed_title,
 };
 use feed_rs::parser;
 use reqwest;
 use tokio::task::JoinHandle;
 
-pub enum NetworkEvent {
+pub enum DataEvent {
     Complete,
     Updating(String),
     UpdateFeeds,
     AddFeed(String),
     DeleteFeed(i64),
     Deleting(String),
+    ReloadFeeds,
+    ReloadedFeeds(Vec<FeedData>),
+    ReloadEntries(i64),
+    ReloadedEntries(Vec<EntryData>),
+    ReadEntry(i64),
 }
 
-pub struct NetworkHandler {
-    sender: mpsc::Sender<NetworkEvent>,
-    receiver: mpsc::Receiver<NetworkEvent>,
+pub struct DataHandler {
+    sender: mpsc::Sender<DataEvent>,
+    receiver: mpsc::Receiver<DataEvent>,
     handler: JoinHandle<()>,
 }
 
-impl NetworkHandler {
+impl DataHandler {
     pub fn new() -> Self {
         let (sender, receiver) = mpsc::channel();
         let (sender2, receiver2) = mpsc::channel();
@@ -34,11 +41,11 @@ impl NetworkHandler {
             let sender = sender2.clone();
             tokio::spawn(async move {
                 while let Ok(event) = receiver.recv() {
-                    if let Err(_) = NetworkHandler::handle_event(event, sender.clone()).await {
+                    if let Err(_) = DataHandler::handle_event(event, sender.clone()).await {
                         // TODO: Log error
                     }
 
-                    if let Err(_) = sender.send(NetworkEvent::Complete) {
+                    if let Err(_) = sender.send(DataEvent::Complete) {
                         // TODO: Log error
                     }
                 }
@@ -52,30 +59,36 @@ impl NetworkHandler {
         }
     }
 
-    pub fn dispatch(&self, event: NetworkEvent) -> AppResult<()> {
+    pub fn dispatch(&self, event: DataEvent) -> AppResult<()> {
         self.sender.send(event)?;
         Ok(())
     }
 
-    pub fn next(&self) -> AppResult<NetworkEvent> {
+    pub fn next(&self) -> AppResult<DataEvent> {
         let event = self.receiver.recv_timeout(TIME_STEP / 4)?;
         Ok(event)
     }
 
     // Handle Event
-    pub async fn handle_event(
-        event: NetworkEvent,
-        sender: mpsc::Sender<NetworkEvent>,
-    ) -> AppResult<()> {
+    pub async fn handle_event(event: DataEvent, sender: mpsc::Sender<DataEvent>) -> AppResult<()> {
         match event {
-            NetworkEvent::UpdateFeeds => {
-                NetworkHandler::update_feeds(sender).await?;
+            DataEvent::UpdateFeeds => {
+                DataHandler::update_feeds(sender).await?;
             }
-            NetworkEvent::AddFeed(url) => {
-                NetworkHandler::add_feed(url).await?;
+            DataEvent::AddFeed(url) => {
+                DataHandler::add_feed(url).await?;
             }
-            NetworkEvent::DeleteFeed(id) => {
-                NetworkHandler::delete_feed(sender, id).await?;
+            DataEvent::DeleteFeed(id) => {
+                DataHandler::delete_feed(sender, id).await?;
+            }
+            DataEvent::ReloadFeeds => {
+                DataHandler::reload_feeds(sender).await?;
+            }
+            DataEvent::ReloadEntries(feed_id) => {
+                DataHandler::reload_entries(sender, &feed_id).await?;
+            }
+            DataEvent::ReadEntry(entry_id) => {
+                DataHandler::read_entry(&entry_id).await?;
             }
             _ => {}
         }
@@ -84,7 +97,7 @@ impl NetworkHandler {
     }
 
     // Fetch feeds and update the app state
-    async fn update_feeds(sender: mpsc::Sender<NetworkEvent>) -> AppResult<()> {
+    async fn update_feeds(sender: mpsc::Sender<DataEvent>) -> AppResult<()> {
         let conn = &mut connect().await?;
 
         let feed_items = select_all_feeds(conn).await?;
@@ -92,7 +105,7 @@ impl NetworkHandler {
         let mut new_feeds = vec![];
 
         for feed in feed_items.iter() {
-            sender.send(NetworkEvent::Updating(format!(
+            sender.send(DataEvent::Updating(format!(
                 "Updating {}...",
                 feed.title.clone().unwrap_or("Untitled Feed".to_string())
             )))?;
@@ -151,17 +164,67 @@ impl NetworkHandler {
         Ok(())
     }
 
-    async fn delete_feed(sender: mpsc::Sender<NetworkEvent>, feed_id: i64) -> AppResult<()> {
+    async fn delete_feed(sender: mpsc::Sender<DataEvent>, feed_id: i64) -> AppResult<()> {
         let conn = &mut connect().await?;
 
         let feed = select_feed(conn, &feed_id).await?;
 
-        sender.send(NetworkEvent::Deleting(format!(
+        sender.send(DataEvent::Deleting(format!(
             "Deleting {}...",
             feed.title.unwrap_or("Untitled Feed".to_string())
         )))?;
 
         delete_feed(conn, feed_id).await?;
+
+        Ok(())
+    }
+
+    async fn reload_feeds(sender: mpsc::Sender<DataEvent>) -> AppResult<()> {
+        let conn = &mut connect().await?;
+
+        let feeds = select_all_feeds(conn).await?;
+        let mut feed_data = vec![];
+
+        for feed in feeds {
+            let mut data = FeedData::from(feed.clone());
+
+            if let Some(link) = select_all_feed_links(conn, &feed.id).await?.first() {
+                data.update_url(link.href.clone());
+            }
+
+            feed_data.push(data);
+        }
+
+        sender.send(DataEvent::ReloadedFeeds(feed_data))?;
+
+        Ok(())
+    }
+
+    async fn reload_entries(sender: mpsc::Sender<DataEvent>, feed_id: &i64) -> AppResult<()> {
+        let conn = &mut connect().await?;
+
+        let entries = select_all_entries(conn, feed_id).await?;
+        let mut entry_data = vec![];
+
+        for entry in entries {
+            let mut data = EntryData::from(entry.clone());
+
+            // TODO: handle entry description
+
+            let links = select_all_entry_links(conn, &entry.id).await?;
+            data.update_links(links);
+            entry_data.push(data);
+        }
+
+        sender.send(DataEvent::ReloadedEntries(entry_data))?;
+
+        Ok(())
+    }
+
+    async fn read_entry(entry_id: &i64) -> AppResult<()> {
+        let conn = &mut connect().await?;
+
+        mark_entry_read(conn, entry_id);
 
         Ok(())
     }

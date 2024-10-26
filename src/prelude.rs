@@ -22,6 +22,23 @@ pub struct FeedData {
     pub description: String,
 }
 
+impl From<Feed> for FeedData {
+    fn from(feed: Feed) -> Self {
+        Self {
+            id: feed.id,
+            title: feed.title.unwrap_or_default(),
+            url: String::new(),
+            description: feed.description.unwrap_or_default(),
+        }
+    }
+}
+
+impl FeedData {
+    pub fn update_url(&mut self, url: String) {
+        self.url = url;
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct NewFeed<'a> {
     pub title: Option<&'a str>,
@@ -121,17 +138,44 @@ pub struct EntryData {
     pub title: String,
     pub description: String,
     pub links: Vec<Link>,
-    pub media: Vec<Media>,
+    pub media: Option<Media>,
     pub read: bool,
+}
+
+impl From<Entry> for EntryData {
+    fn from(value: Entry) -> Self {
+        Self {
+            id: value.id,
+            title: value.title.unwrap_or_default(),
+            description: String::new(),
+            links: vec![],
+            media: None,
+            read: value.read.unwrap_or_default(),
+        }
+    }
+}
+
+impl EntryData {
+    pub fn update_links(&mut self, links: Vec<Link>) {
+        self.links = links;
+    }
+
+    pub fn update_media(&mut self, media: Media) {
+        self.media = Some(media);
+    }
+
+    pub fn update_description(&mut self, description: String) {
+        self.description = description;
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NewEntry<'a> {
-    pub feed_id: &'a i32,
+    pub feed_id: &'a i64,
     pub title: Option<&'a str>,
     pub updated: Option<&'a NaiveDateTime>,
-    pub content_id: Option<&'a i32>,
-    pub media_id: Option<&'a i32>,
+    pub content_id: Option<&'a i64>,
+    pub media_id: Option<&'a i64>,
     pub summary: Option<&'a str>,
     pub source: Option<&'a str>,
 }
@@ -529,7 +573,7 @@ pub struct NewContent<'a> {
     pub body: Option<&'a str>,
     pub content_type: Option<&'a str>,
     pub length: Option<&'a i64>,
-    pub src: Option<&'a i32>,
+    pub src: Option<&'a i64>,
 }
 
 #[derive(Default, Debug)]

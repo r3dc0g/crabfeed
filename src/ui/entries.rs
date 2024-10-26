@@ -1,7 +1,6 @@
 use crate::app::{ActiveBlock, Route, RouteId};
 use crate::config::Settings;
-use crate::db::{mark_entry_read, select_all_entries};
-use crate::prelude::{Entry, Feed};
+use crate::prelude::EntryData;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::style::Stylize;
 use ratatui::{buffer::Buffer, layout::Rect, prelude::*, style::Style, widgets::ListState};
@@ -12,23 +11,16 @@ use super::{components::*, UiCallback};
 
 pub struct Entries {
     list_state: ListState,
-    entry_items: Vec<Entry>,
+    entry_items: Vec<EntryData>,
     selected: bool,
 }
 
 impl Entries {
-    pub fn new(selected_feed: Option<&Feed>) -> Self {
-        match selected_feed {
-            Some(feed) => Self {
-                list_state: ListState::default(),
-                entry_items: select_all_entries(feed).unwrap_or(vec![]),
-                selected: false,
-            },
-            None => Self {
-                list_state: ListState::default(),
-                entry_items: vec![],
-                selected: false,
-            },
+    pub fn new(entries: Vec<EntryData>) -> Self {
+        Self {
+            list_state: ListState::default(),
+            entry_items: entries,
+            selected: false,
         }
     }
 
@@ -36,8 +28,8 @@ impl Entries {
         self.selected = selected;
     }
 
-    pub fn update_entries(&mut self, feed: &Feed) {
-        let mut items = select_all_entries(feed).unwrap_or(vec![]);
+    pub fn update_entries(&mut self, entries: Vec<EntryData>) {
+        let mut items = entries;
         items.reverse();
         self.entry_items = items;
     }
@@ -138,9 +130,7 @@ impl View for Entries {
             KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => {
                 let entry = Some(self.entry_items[self.list_state.selected().unwrap_or(0)].clone());
                 if let Some(ref real_entry) = entry {
-                    if let Err(_) = mark_entry_read(real_entry.id) {
-                        // TODO: Error Handling
-                    }
+                    // TODO: Mark entry read
                 }
                 return Some(Box::new(move |app| {
                     app.ui

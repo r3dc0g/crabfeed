@@ -2,8 +2,7 @@ use crate::app::ActiveBlock;
 use crate::app::Route;
 use crate::app::RouteId;
 use crate::config::Settings;
-use crate::db::select_all_feeds;
-use crate::prelude::Feed;
+use crate::prelude::FeedData;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use ratatui::{buffer::Buffer, layout::Rect, prelude::*, widgets::ListState};
@@ -15,20 +14,20 @@ use super::View;
 
 pub struct Feeds {
     list_state: ListState,
-    feed_items: Vec<Feed>,
+    feed_items: Vec<FeedData>,
     selected: bool,
 }
 
 impl Feeds {
-    pub fn new() -> Self {
+    pub fn new(feeds: Vec<FeedData>) -> Self {
         Self {
             list_state: ListState::default(),
-            feed_items: select_all_feeds().unwrap_or(vec![]),
+            feed_items: feeds,
             selected: false,
         }
     }
 
-    pub fn get_selected_feed(&self) -> Option<Feed> {
+    pub fn get_selected_feed(&self) -> Option<FeedData> {
         let index = self.list_state.selected()?;
         self.feed_items.get(index).cloned()
     }
@@ -37,8 +36,8 @@ impl Feeds {
         self.selected = selected;
     }
 
-    pub fn update_feeds(&mut self) {
-        self.feed_items = select_all_feeds().unwrap_or(vec![]);
+    pub fn update_feeds(&mut self, feeds: Vec<FeedData>) {
+        self.feed_items = feeds;
     }
 }
 
@@ -52,7 +51,7 @@ impl View for Feeds {
         let feed_titles: Vec<String> = self
             .feed_items
             .iter()
-            .map(|feed| feed.title.clone().unwrap_or("Unnamed Feed".to_string()))
+            .map(|feed| feed.title.clone())
             .collect();
 
         ItemList::new(&feed_titles)

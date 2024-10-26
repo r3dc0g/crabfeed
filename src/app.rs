@@ -1,5 +1,5 @@
+use crate::data::data::{DataEvent, DataHandler};
 use crate::event::{EventHandler, TerminalEvent};
-use crate::network::{NetworkEvent, NetworkHandler};
 use crate::time::Tick;
 use crate::tui::Tui;
 use crate::ui::ui::Ui;
@@ -42,7 +42,7 @@ pub struct App {
     pub is_running: bool,
     pub is_loading: bool,
     pub ui: Ui,
-    pub network_handler: NetworkHandler,
+    pub network_handler: DataHandler,
 }
 
 impl App {
@@ -51,7 +51,7 @@ impl App {
             is_running: true,
             is_loading: false,
             ui: Ui::new(),
-            network_handler: NetworkHandler::new(),
+            network_handler: DataHandler::new(),
         }
     }
 
@@ -113,16 +113,22 @@ impl App {
         if self.is_loading {
             if let Ok(event) = self.network_handler.next() {
                 match event {
-                    NetworkEvent::Complete => {
+                    DataEvent::Complete => {
                         self.ui.update_feeds();
                         self.is_loading = false;
                         self.ui.is_loading = false;
                     }
-                    NetworkEvent::Updating(message) => {
+                    DataEvent::Updating(message) => {
                         self.ui.loading_msg = message;
                     }
-                    NetworkEvent::Deleting(message) => {
+                    DataEvent::Deleting(message) => {
                         self.ui.loading_msg = message;
+                    }
+                    DataEvent::ReloadedFeeds(_feeds) => {
+                        // Send new feeds to ui
+                    }
+                    DataEvent::ReloadedEntries(_entries) => {
+                        // Send new entries to ui
                     }
                     _ => {}
                 }

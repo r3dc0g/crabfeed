@@ -1,9 +1,8 @@
 pub mod app;
 pub mod config;
-pub mod db;
+pub mod data;
 pub mod error;
 pub mod event;
-pub mod network;
 pub mod prelude;
 pub mod time;
 pub mod tui;

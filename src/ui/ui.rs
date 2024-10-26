@@ -7,7 +7,7 @@ use super::{components::*, UiCallback};
 use crate::app::{ActiveBlock, Route, RouteId};
 use crate::config::{get_configuration, Settings};
 use crate::network::NetworkEvent;
-use crate::prelude::Entry;
+use crate::prelude::{Entry, EntryData, FeedData};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -58,21 +58,15 @@ impl Ui {
         self.navigation_stack.pop();
     }
 
-    pub fn update_entries(&mut self) {
-        let current_feed = self.feeds.get_selected_feed();
-        match current_feed {
-            Some(feed) => {
-                self.entries.update_entries(&feed);
-            }
-            None => {}
-        }
+    pub fn update_entries(&mut self, entries: Vec<EntryData>) {
+        self.entries.update_entries(entries);
     }
 
-    pub fn update_feeds(&mut self) {
-        self.feeds.update_feeds();
+    pub fn update_feeds(&mut self, feeds: Vec<FeedData>) {
+        self.feeds.update_feeds(feeds);
     }
 
-    pub fn set_entry(&mut self, entry: Option<Entry>) {
+    pub fn set_entry(&mut self, entry: Option<EntryData>) {
         self.entry.set_entry(entry);
     }
 
