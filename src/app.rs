@@ -106,7 +106,7 @@ impl App {
         }
     }
 
-    pub fn handle_mouse_event(&mut self, event: MouseEvent) {}
+    pub fn handle_mouse_event(&mut self, _event: MouseEvent) {}
 
     pub fn handle_tick_event(&mut self, _tick: Tick) {
         assert_eq!(self.ui.is_loading, self.is_loading);
@@ -119,6 +119,9 @@ impl App {
                         self.ui.is_loading = false;
                     }
                     NetworkEvent::Updating(message) => {
+                        self.ui.loading_msg = message;
+                    }
+                    NetworkEvent::Deleting(message) => {
                         self.ui.loading_msg = message;
                     }
                     _ => {}

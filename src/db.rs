@@ -801,7 +801,7 @@ pub async fn insert_links(
         let content_links = select_all_content_links(conn, e_id).await?;
 
         for link_string in content_links {
-            insert_link(conn, link_string, None, Some(e_id))?;
+            insert_link(conn, link_string, None, Some(e_id)).await?;
         }
     }
 
@@ -1087,12 +1087,17 @@ async fn insert_content(
     query!(
         r#"
         INSERT INTO content (body, content_type, length, src)
-        VALUES ($1, $2, $3, $4)
+        VALUES (
+            $1,
+            $2,
+            $3,
+            (SELECT id FROM link WHERE link.id = $4)
+        )
         "#,
         new_content.body,
         new_content.content_type,
         new_content.length,
-        None
+        new_content.src
     )
     .execute(&mut *conn)
     .await?;
@@ -1217,6 +1222,8 @@ pub async fn insert_media(
                 ret_link.id,
                 ret_media.id
             )
+            .execute(&mut *conn)
+            .await?;
         }
     }
 
@@ -1251,7 +1258,7 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
         delete_entry(conn, entry.id).await?;
     }
 
-    if let Ok(links) = select_all_feed_links(feed_id).await? {
+    if let Ok(links) = select_all_feed_links(conn, &feed_id).await {
         for link in links {
             query!(
                 r#"
@@ -1277,7 +1284,7 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
         }
     }
 
-    if let Ok(authors) = select_all_feed_authors(feed_id).await? {
+    if let Ok(authors) = select_all_feed_authors(conn, &feed_id).await {
         for author in authors {
             query!(
                 r#"
@@ -1303,7 +1310,7 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
         }
     }
 
-    if let Ok(categories) = select_all_feed_categories(feed_id).await? {
+    if let Ok(categories) = select_all_feed_categories(conn, &feed_id).await {
         for category in categories {
             query!(
                 r#"
@@ -1349,7 +1356,7 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
 
     let entry = select_entry(conn, &entry_id).await?;
 
-    if let Ok(links) = select_all_entry_links(entry.id).await? {
+    if let Ok(links) = select_all_entry_links(conn, &entry_id).await {
         for link in links {
             query!(
                 r#"
@@ -1374,7 +1381,7 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
             .await?;
         }
     }
-    if let Ok(authors) = select_all_entry_authors(entry.id).await? {
+    if let Ok(authors) = select_all_entry_authors(conn, &entry.id).await {
         for author in authors {
             query!(
                 r#"
@@ -1382,7 +1389,7 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
                 WHERE entry_author.author_id = $1
                 AND entry_author.entry_id = $2
                 "#,
-                authors.id,
+                author.id,
                 entry.id
             )
             .execute(&mut *conn)
@@ -1413,7 +1420,7 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
     };
 
     if let Some(media_id) = entry.media_id {
-        if let Ok(media_links) = select_all_media_links(media_id).await? {
+        if let Ok(media_links) = select_all_media_links(conn, &media_id).await {
             for link in media_links {
                 query!(
                     r#"
@@ -1440,7 +1447,7 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
         .await?;
     };
 
-    if let Ok(categories) = select_all_entry_categories(conn, entry.id).await? {
+    if let Ok(categories) = select_all_entry_categories(conn, &entry_id).await {
         for category in categories {
             query!(
                 r#"
@@ -1483,9 +1490,9 @@ async fn select_all_content_links(
     conn: &mut SqliteConnection,
     entry_id: i64,
 ) -> AppResult<Vec<String>> {
-    if let Ok(entry) = select_entry(conn, &entry_id).await? {
+    if let Ok(entry) = select_entry(conn, &entry_id).await {
         if let Some(content_id) = &entry.content_id {
-            if let Ok(content) = select_content(conn, content_id).await? {
+            if let Ok(content) = select_content(conn, &content_id).await {
                 if let Some(body) = &content.body {
                     return Ok(extract_links(body));
                 }
