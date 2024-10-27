@@ -1,4 +1,4 @@
-use crate::{config::Settings, network::NetworkEvent};
+use crate::{config::Settings, data::data::DataEvent};
 
 use super::{
     components::{BlockText, Popup},
@@ -106,8 +106,7 @@ impl View for Add {
                 Some(Box::new(move |app| {
                     app.is_loading = true;
                     app.ui.is_loading = true;
-                    app.network_handler
-                        .dispatch(NetworkEvent::AddFeed(url.clone()))?;
+                    app.data_handler.dispatch(DataEvent::AddFeed(url.clone()))?;
                     app.ui.back();
                     Ok(())
                 }))

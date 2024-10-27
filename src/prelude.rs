@@ -135,6 +135,7 @@ pub struct Entry {
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct EntryData {
     pub id: i64,
+    pub feed_id: i64,
     pub title: String,
     pub description: String,
     pub links: Vec<Link>,
@@ -146,6 +147,7 @@ impl From<Entry> for EntryData {
     fn from(value: Entry) -> Self {
         Self {
             id: value.id,
+            feed_id: value.feed_id,
             title: value.title.unwrap_or_default(),
             description: String::new(),
             links: vec![],

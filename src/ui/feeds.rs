@@ -2,6 +2,7 @@ use crate::app::ActiveBlock;
 use crate::app::Route;
 use crate::app::RouteId;
 use crate::config::Settings;
+use crate::data::data::DataEvent;
 use crate::prelude::FeedData;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
@@ -19,11 +20,18 @@ pub struct Feeds {
 }
 
 impl Feeds {
-    pub fn new(feeds: Vec<FeedData>) -> Self {
-        Self {
-            list_state: ListState::default(),
-            feed_items: feeds,
-            selected: false,
+    pub fn new(feeds: Option<Vec<FeedData>>) -> Self {
+        match feeds {
+            Some(feed_data) => Self {
+                list_state: ListState::default(),
+                feed_items: feed_data,
+                selected: false,
+            },
+            None => Self {
+                list_state: ListState::default(),
+                feed_items: vec![],
+                selected: false,
+            },
         }
     }
 
@@ -66,6 +74,10 @@ impl View for Feeds {
     fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key.code {
             KeyCode::Char('j') | KeyCode::Down => {
+                if self.feed_items.is_empty() {
+                    return None;
+                }
+
                 if let Some(index) = self.list_state.selected() {
                     if index < self.feed_items.len() - 1 {
                         self.list_state.select_next();
@@ -76,12 +88,18 @@ impl View for Feeds {
                     self.list_state.select_first();
                 }
 
+                let feed = self.get_selected_feed().expect("Feed wasn't selected");
+
                 return Some(Box::new(move |app| {
-                    app.ui.update_entries();
+                    app.data_handler
+                        .dispatch(DataEvent::ReloadEntries(feed.id.clone()))?;
                     Ok(())
                 }));
             }
             KeyCode::Char('k') | KeyCode::Up => {
+                if self.feed_items.is_empty() {
+                    return None;
+                }
                 if let Some(index) = self.list_state.selected() {
                     if index > 0 {
                         self.list_state.select(Some(index - 1));
@@ -91,8 +109,12 @@ impl View for Feeds {
                 } else {
                     self.list_state.select(Some(self.feed_items.len() - 1));
                 }
+
+                let feed = self.get_selected_feed().expect("Feed wasn't selected");
+
                 return Some(Box::new(move |app| {
-                    app.ui.update_entries();
+                    app.data_handler
+                        .dispatch(DataEvent::ReloadEntries(feed.id.clone()))?;
                     Ok(())
                 }));
             }

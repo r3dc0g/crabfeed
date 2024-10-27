@@ -16,11 +16,18 @@ pub struct Entries {
 }
 
 impl Entries {
-    pub fn new(entries: Vec<EntryData>) -> Self {
-        Self {
-            list_state: ListState::default(),
-            entry_items: entries,
-            selected: false,
+    pub fn new(entries: Option<Vec<EntryData>>) -> Self {
+        match entries {
+            Some(entry_data) => Self {
+                list_state: ListState::default(),
+                entry_items: entry_data,
+                selected: false,
+            },
+            None => Self {
+                list_state: ListState::default(),
+                entry_items: vec![],
+                selected: false,
+            },
         }
     }
 
@@ -48,12 +55,7 @@ impl View for Entries {
         let entries: Vec<(bool, String)> = self
             .entry_items
             .iter()
-            .map(|entry| {
-                (
-                    entry.read.clone().unwrap_or(false),
-                    entry.title.clone().unwrap_or("Untitled Entry".to_string()),
-                )
-            })
+            .map(|entry| (entry.read.clone(), entry.title.clone()))
             .collect();
         let list_len = entries.len();
         let mut unread_len = 0;
@@ -129,9 +131,7 @@ impl View for Entries {
             }
             KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => {
                 let entry = Some(self.entry_items[self.list_state.selected().unwrap_or(0)].clone());
-                if let Some(ref real_entry) = entry {
-                    // TODO: Mark entry read
-                }
+
                 return Some(Box::new(move |app| {
                     app.ui
                         .set_current_route(Route::new(RouteId::Entry, ActiveBlock::Entry));

@@ -42,7 +42,7 @@ pub struct App {
     pub is_running: bool,
     pub is_loading: bool,
     pub ui: Ui,
-    pub network_handler: DataHandler,
+    pub data_handler: DataHandler,
 }
 
 impl App {
@@ -51,7 +51,7 @@ impl App {
             is_running: true,
             is_loading: false,
             ui: Ui::new(),
-            network_handler: DataHandler::new(),
+            data_handler: DataHandler::new(),
         }
     }
 
@@ -111,10 +111,9 @@ impl App {
     pub fn handle_tick_event(&mut self, _tick: Tick) {
         assert_eq!(self.ui.is_loading, self.is_loading);
         if self.is_loading {
-            if let Ok(event) = self.network_handler.next() {
+            if let Ok(event) = self.data_handler.next() {
                 match event {
                     DataEvent::Complete => {
-                        self.ui.update_feeds();
                         self.is_loading = false;
                         self.ui.is_loading = false;
                     }
@@ -124,11 +123,11 @@ impl App {
                     DataEvent::Deleting(message) => {
                         self.ui.loading_msg = message;
                     }
-                    DataEvent::ReloadedFeeds(_feeds) => {
-                        // Send new feeds to ui
+                    DataEvent::ReloadedFeeds(feeds) => {
+                        self.ui.update_feeds(feeds);
                     }
-                    DataEvent::ReloadedEntries(_entries) => {
-                        // Send new entries to ui
+                    DataEvent::ReloadedEntries(entries) => {
+                        self.ui.update_entries(entries);
                     }
                     _ => {}
                 }

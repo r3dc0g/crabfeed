@@ -10,7 +10,6 @@ use super::db::{
 };
 use feed_rs::parser;
 use reqwest;
-use tokio::task::JoinHandle;
 
 pub enum DataEvent {
     Complete,
@@ -29,7 +28,6 @@ pub enum DataEvent {
 pub struct DataHandler {
     sender: mpsc::Sender<DataEvent>,
     receiver: mpsc::Receiver<DataEvent>,
-    handler: JoinHandle<()>,
 }
 
 impl DataHandler {
@@ -37,7 +35,7 @@ impl DataHandler {
         let (sender, receiver) = mpsc::channel();
         let (sender2, receiver2) = mpsc::channel();
 
-        let handler = {
+        {
             let sender = sender2.clone();
             tokio::spawn(async move {
                 while let Ok(event) = receiver.recv() {
@@ -55,7 +53,6 @@ impl DataHandler {
         Self {
             sender,
             receiver: receiver2,
-            handler,
         }
     }
 
@@ -224,7 +221,7 @@ impl DataHandler {
     async fn read_entry(entry_id: &i64) -> AppResult<()> {
         let conn = &mut connect().await?;
 
-        mark_entry_read(conn, entry_id);
+        mark_entry_read(conn, entry_id).await?;
 
         Ok(())
     }

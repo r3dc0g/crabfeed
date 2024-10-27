@@ -6,8 +6,8 @@ use super::View;
 use super::{components::*, UiCallback};
 use crate::app::{ActiveBlock, Route, RouteId};
 use crate::config::{get_configuration, Settings};
-use crate::network::NetworkEvent;
-use crate::prelude::{Entry, EntryData, FeedData};
+use crate::data::data::DataEvent;
+use crate::prelude::{EntryData, FeedData};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -27,9 +27,9 @@ pub struct Ui {
 
 impl Ui {
     pub fn new() -> Self {
-        let mut feeds = Feeds::new();
+        let mut feeds = Feeds::new(None);
         feeds.select(true);
-        let entries = Entries::new(feeds.get_selected_feed().as_ref());
+        let entries = Entries::new(None);
         let entry = EntryView::new(None);
         let config = get_configuration().unwrap_or_default();
 
@@ -67,7 +67,9 @@ impl Ui {
     }
 
     pub fn set_entry(&mut self, entry: Option<EntryData>) {
-        self.entry.set_entry(entry);
+        if let Some(data) = entry {
+            self.entry.set_entry(data);
+        }
     }
 
     pub fn unset_popup(&mut self) {
@@ -124,7 +126,7 @@ impl Ui {
             }
             _ if key.code == KeyCode::Char('u') && key.modifiers == KeyModifiers::CONTROL => {
                 return Some(Box::new(move |app| {
-                    app.network_handler.dispatch(NetworkEvent::UpdateFeeds)?;
+                    app.data_handler.dispatch(DataEvent::UpdateFeeds)?;
                     app.is_loading = true;
                     app.ui.is_loading = true;
                     Ok(())
