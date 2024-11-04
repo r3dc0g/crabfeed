@@ -319,11 +319,7 @@ impl View for Entry {
                     self.selected_section = None;
                 }
 
-                let feed_id = entry.feed_id;
-
                 return Some(Box::new(move |app| {
-                    app.data_handler
-                        .dispatch(DataEvent::ReloadEntries(feed_id.clone()))?;
                     app.ui.back();
                     Ok(())
                 }));

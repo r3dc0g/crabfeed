@@ -9,7 +9,7 @@ mod entries;
 mod entry;
 mod feeds;
 pub mod ui;
-mod util;
+pub mod util;
 
 pub type UiCallback = Box<dyn Fn(&mut App) -> AppResult<()>>;
 

@@ -1,189 +1,190 @@
+use std::str::FromStr;
+
 use crate::error::Error;
 use crate::prelude::*;
 use crate::AppResult;
 use feed_rs::model;
 use html_parser::{Dom, Node};
+use log::debug;
 use sqlx::query;
 use sqlx::query_as;
-use sqlx::Connection;
+use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::ConnectOptions;
 use sqlx::SqliteConnection;
-use std::env;
-use std::fs;
-use std::fs::create_dir_all;
 
 async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
     query!(
         "CREATE TABLE IF NOT EXISTS feed ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        title VARCHAR, \
-        updated DATETIME, \
-        description TEXT, \
-        language VARCHAR, \
-        published DATETIME \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            title VARCHAR, \
+            updated DATETIME, \
+            description TEXT, \
+            language VARCHAR, \
+            published DATETIME \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS entry ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        feed_id INTEGER UNSIGNED NOT NULL, \
-        title VARCHAR, \
-        updated DATETIME, \
-        content_id INTEGER, \
-        summary TEXT, \
-        source VARCHAR, \
-        read BOOLEAN DEFAULT FALSE, \
-        media_id INTEGER, \
-        FOREIGN KEY(media_id) REFERENCES media(media_id), \
-        FOREIGN KEY(feed_id) REFERENCES feed(feed_id), \
-        FOREIGN KEY(content_id) REFERENCES content(content_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            feed_id INTEGER UNSIGNED NOT NULL, \
+            title VARCHAR, \
+            updated DATETIME, \
+            content_id INTEGER, \
+            summary TEXT, \
+            source VARCHAR, \
+            read BOOLEAN DEFAULT FALSE, \
+            media_id INTEGER, \
+            FOREIGN KEY(media_id) REFERENCES media(id) ON DELETE CASCADE, \
+            FOREIGN KEY(feed_id) REFERENCES feed(id) ON DELETE CASCADE, \
+            FOREIGN KEY(content_id) REFERENCES content(id) ON DELETE CASCADE \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS author ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        name VARCHAR NOT NULL, \
-        uri VARCHAR, \
-        email VARCHAR \
-     )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            name VARCHAR NOT NULL, \
+            uri VARCHAR, \
+            email VARCHAR \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS link ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        href VARCHAR NOT NULL, \
-        rel VARCHAR, \
-        media_type VARCHAR, \
-        href_lang VARCHAR, \
-        title VARCHAR, \
-        length BIGINT \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            href VARCHAR NOT NULL, \
+            rel VARCHAR, \
+            media_type VARCHAR, \
+            href_lang VARCHAR, \
+            title VARCHAR, \
+            length BIGINT \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS content ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        body TEXT, \
-        content_type VARCHAR, \
-        length BIGINT, \
-        src INTEGER, \
-        FOREIGN KEY(src) REFERENCES link(link_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            body TEXT, \
+            content_type VARCHAR, \
+            length BIGINT, \
+            src INTEGER, \
+            FOREIGN KEY(src) REFERENCES link(id) ON DELETE CASCADE\
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS category ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        term VARCHAR NOT NULL, \
-        scheme VARCHAR, \
-        label VARCHAR \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            term VARCHAR NOT NULL, \
+            scheme VARCHAR, \
+            label VARCHAR \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS media ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        title VARCHAR, \
-        thumbnail VARCHAR, \
-        description VARCHAR \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            title VARCHAR, \
+            thumbnail VARCHAR, \
+            description VARCHAR \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS media_link ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        link_id INTEGER NOT NULL, \
-        media_id INTEGER NOT NULL, \
-        FOREIGN KEY(link_id) REFERENCES link(link_id), \
-        FOREIGN KEY(media_id) REFERENCES media(media_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            link_id INTEGER NOT NULL, \
+            media_id INTEGER NOT NULL, \
+            FOREIGN KEY(link_id) REFERENCES link(id), \
+            FOREIGN KEY(media_id) REFERENCES media(id) \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS feed_author ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        author_id INTEGER NOT NULL, \
-        feed_id INTEGER NOT NULL, \
-        FOREIGN KEY(author_id) REFERENCES author(author_id), \
-        FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            author_id INTEGER NOT NULL, \
+            feed_id INTEGER NOT NULL, \
+            FOREIGN KEY(author_id) REFERENCES author(id), \
+            FOREIGN KEY(feed_id) REFERENCES feed(id) \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS entry_author ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        author_id INTEGER NOT NULL, \
-        entry_id INTEGER NOT NULL, \
-        FOREIGN KEY(author_id) REFERENCES author(author_id), \
-        FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            author_id INTEGER NOT NULL, \
+            entry_id INTEGER NOT NULL, \
+            FOREIGN KEY(author_id) REFERENCES author(id), \
+            FOREIGN KEY(entry_id) REFERENCES entry(id) \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS feed_link ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        link_id INTEGER NOT NULL, \
-        feed_id INTEGER NOT NULL, \
-        FOREIGN KEY(link_id) REFERENCES link(link_id), \
-        FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            link_id INTEGER NOT NULL, \
+            feed_id INTEGER NOT NULL, \
+            FOREIGN KEY(link_id) REFERENCES link(id), \
+            FOREIGN KEY(feed_id) REFERENCES feed(id) \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS entry_link ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        link_id INTEGER NOT NULL, \
-        entry_id INTEGER NOT NULL, \
-        FOREIGN KEY(link_id) REFERENCES link(link_id), \
-        FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            link_id INTEGER NOT NULL, \
+            entry_id INTEGER NOT NULL, \
+            FOREIGN KEY(link_id) REFERENCES link(id), \
+            FOREIGN KEY(entry_id) REFERENCES entry(id) \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS feed_category ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        category_id INTEGER NOT NULL, \
-        feed_id INTEGER NOT NULL, \
-        FOREIGN KEY(category_id) REFERENCES category(category_id), \
-        FOREIGN KEY(feed_id) REFERENCES feed(feed_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            category_id INTEGER NOT NULL, \
+            feed_id INTEGER NOT NULL, \
+            FOREIGN KEY(category_id) REFERENCES category(id), \
+            FOREIGN KEY(feed_id) REFERENCES feed(id) \
+        )",
     )
     .execute(&mut *conn)
     .await?;
 
     query!(
         "CREATE TABLE IF NOT EXISTS entry_category ( \
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
-        category_id INTEGER NOT NULL, \
-        entry_id INTEGER NOT NULL, \
-        FOREIGN KEY(category_id) REFERENCES category(category_id), \
-        FOREIGN KEY(entry_id) REFERENCES entry(entry_id) \
-    )",
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+            category_id INTEGER NOT NULL, \
+            entry_id INTEGER NOT NULL, \
+            FOREIGN KEY(category_id) REFERENCES category(id), \
+            FOREIGN KEY(entry_id) REFERENCES entry(id) \
+        )",
     )
     .execute(&mut *conn)
     .await?;
@@ -191,31 +192,22 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
     Ok(())
 }
 
-pub async fn connect() -> AppResult<SqliteConnection> {
+pub async fn connect(database_url: String) -> AppResult<SqliteConnection> {
     if cfg!(unix) {
-        let mut first_creation = false;
-        let home = env::var("HOME").unwrap();
-        let database_folder = format!("sqlite:///{}/.local/share/crabfeed/", home);
-        let database_url = format!("{}/crabfeed.db", database_folder);
-        create_dir_all(database_folder)?;
-
-        if fs::metadata(&database_url).is_err() {
-            first_creation = true;
-        }
-
-        let mut connection = SqliteConnection::connect(&database_url).await?;
-
-        if first_creation {
-            setup_database(&mut connection).await?;
-        }
-
-        return Ok(connection);
+        let mut conn = SqliteConnectOptions::from_str(&database_url)?
+            .create_if_missing(true)
+            .connect()
+            .await?;
+        setup_database(&mut conn).await?;
+        return Ok(conn);
     }
 
     Err(Error::Static("Unsupported OS"))
 }
 
 pub async fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppResult<i64> {
+    debug!("Starting Feed Insertion...");
+
     let mut builder = FeedBuilder::new();
 
     let new_feed = builder
@@ -239,11 +231,13 @@ pub async fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppR
     .await
     {
         Ok(found_feed) => {
+            debug!("Feed is already in DB");
             insert_entries(conn, feed.entries, found_feed.id).await?;
 
             return Ok(found_feed.id);
         }
         Err(_) => {
+            debug!("Inserting New Feed");
             query!(
                 r#"
                 INSERT INTO feed (title, updated, description, language, published)
@@ -270,6 +264,7 @@ pub async fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppR
             .fetch_one(&mut *conn)
             .await?;
 
+            debug!("Populating feed data");
             insert_authors(conn, feed.authors, Some(ret_feed.id), None).await?;
             insert_entries(conn, feed.entries, ret_feed.id).await?;
             insert_links(conn, feed.links, Some(ret_feed.id), None).await?;
@@ -313,6 +308,7 @@ pub async fn select_all_feeds(conn: &mut SqliteConnection) -> AppResult<Vec<Feed
 }
 
 pub async fn select_feed(conn: &mut SqliteConnection, feed_id: &i64) -> AppResult<Feed> {
+    debug!("Selecting Feed...");
     let result = query_as!(
         Feed,
         r#"
@@ -550,6 +546,8 @@ async fn insert_entries(
     let mut builder = EntryBuilder::new();
 
     for entry in entries.iter().rev() {
+        debug!("Starting Entry Insertion...");
+
         let content_id = insert_content(conn, entry.content.clone()).await?;
 
         let media_id = insert_media(conn, entry.media.first().cloned()).await?;
@@ -577,30 +575,32 @@ async fn insert_entries(
         .await?;
 
         if possible_entries.is_empty() {
+            debug!("Inserting new entry...");
             query!(
                 r#"
-                INSERT INTO entry (feed_id, title, updated, content_id, media_id, summary, source)
+                INSERT INTO entry (feed_id, title, updated, content_id, summary, source, media_id)
                 VALUES (
                     (SELECT id FROM feed WHERE feed.id = $1),
                     $2,
                     $3,
                     (SELECT id FROM content WHERE content.id = $4),
-                    (SELECT id FROM media WHERE media.id = $5),
+                    $5,
                     $6,
-                    $7
+                    (SELECT id FROM media WHERE media.id = $7)
                 )
                 "#,
                 new_entry.feed_id,
                 new_entry.title,
                 new_entry.updated,
                 new_entry.content_id,
-                new_entry.media_id,
                 new_entry.summary,
-                new_entry.source
+                new_entry.source,
+                new_entry.media_id
             )
             .execute(&mut *conn)
             .await?;
 
+            debug!("Returning Entry ID...");
             let ret_entry = query_as!(
                 Entry,
                 r#"
@@ -608,23 +608,14 @@ async fn insert_entries(
                 FROM entry
                 WHERE entry.feed_id = $1
                 AND entry.title = $2
-                AND entry.updated = $3
-                AND entry.content_id = $4
-                AND entry.media_id = $5
-                AND entry.summary = $6
-                AND entry.source = $7
                 "#,
                 new_entry.feed_id,
-                new_entry.title,
-                new_entry.updated,
-                new_entry.content_id,
-                new_entry.media_id,
-                new_entry.summary,
-                new_entry.source
+                new_entry.title
             )
             .fetch_one(&mut *conn)
             .await?;
 
+            debug!("Populating Entry data...");
             insert_authors(conn, entry.authors.clone(), None, Some(ret_entry.id)).await?;
             insert_links(conn, entry.links.clone(), None, Some(ret_entry.id)).await?;
             insert_categories(conn, entry.categories.clone(), None, Some(ret_entry.id)).await?;
@@ -640,6 +631,7 @@ async fn insert_authors(
     feed_id: Option<i64>,
     entry_id: Option<i64>,
 ) -> AppResult<()> {
+    debug!("Starting Author Insertion...");
     let mut builder = AuthorBuilder::new();
 
     for person in authors {
@@ -649,65 +641,106 @@ async fn insert_authors(
             .email(person.email)
             .build()?;
 
-        query!(
-            r#"
-            INSERT INTO author (name, uri, email)
-            VALUES ($1, $2, $3)
-            "#,
-            new_author.name,
-            new_author.uri,
-            new_author.email
-        )
-        .execute(&mut *conn)
-        .await?;
-
-        let ret_author = query_as!(
+        let found_author = query_as!(
             Author,
             r#"
             SELECT *
             FROM author
-            WHERE author.name = ?
+            WHERE author.name = $1
             "#,
-            new_author.name
+            new_author.name,
         )
         .fetch_one(&mut *conn)
-        .await?;
+        .await;
 
-        let Some(f_id) = feed_id else {
-            let Some(e_id) = entry_id else {
-                return Err(Error::Static("Orphaned Author"));
+        if let Ok(ret_author) = found_author {
+            debug!("Author is already in DB");
+            let Some(f_id) = feed_id else {
+                let Some(e_id) = entry_id else {
+                    return Err(Error::Static("Orphaned Author"));
+                };
+
+                query!(
+                    r#"
+                    INSERT INTO entry_author (author_id, entry_id)
+                    VALUES ($1, $2)
+                    "#,
+                    ret_author.id,
+                    e_id
+                )
+                .execute(&mut *conn)
+                .await?;
+
+                continue;
             };
 
             query!(
                 r#"
-                INSERT INTO entry_author (author_id, entry_id)
-                VALUES (
-                    (SELECT id FROM author WHERE author.id = $1),
-                    (SELECT id FROM entry WHERE entry.id = $2)
-                )
+                INSERT INTO feed_author (author_id, feed_id)
+                VALUES ($1, $2)
                 "#,
                 ret_author.id,
-                e_id
+                f_id
+            )
+            .execute(&mut *conn)
+            .await?;
+        } else {
+            debug!("Inserting new author...");
+            query!(
+                r#"
+                INSERT INTO author (name, uri, email)
+                VALUES ($1, $2, $3)
+                "#,
+                new_author.name,
+                new_author.uri,
+                new_author.email
             )
             .execute(&mut *conn)
             .await?;
 
-            continue;
-        };
-
-        query!(
-            r#"
-            INSERT INTO feed_author (author_id, feed_id)
-            VALUES (
-                (SELECT id FROM author WHERE author.id = $1),
-                (SELECT id FROM feed WHERE feed.id = $2)
+            debug!("Returning Author ID...");
+            let ret_author = query_as!(
+                Author,
+                r#"
+                SELECT *
+                FROM author
+                WHERE author.name = ?
+                "#,
+                new_author.name
             )
-            "#,
-            ret_author.id,
-            f_id
-        )
-        .execute(&mut *conn)
-        .await?;
+            .fetch_one(&mut *conn)
+            .await?;
+
+            let Some(f_id) = feed_id else {
+                let Some(e_id) = entry_id else {
+                    return Err(Error::Static("Orphaned Author"));
+                };
+
+                query!(
+                    r#"
+                    INSERT INTO entry_author (author_id, entry_id)
+                    VALUES ($1, $2)
+                    "#,
+                    ret_author.id,
+                    e_id
+                )
+                .execute(&mut *conn)
+                .await?;
+
+                continue;
+            };
+
+            query!(
+                r#"
+                INSERT INTO feed_author (author_id, feed_id)
+                VALUES ($1, $2)
+                "#,
+                ret_author.id,
+                f_id
+            )
+            .execute(&mut *conn)
+            .await?;
+        }
     }
 
     Ok(())
@@ -719,6 +752,7 @@ pub async fn insert_links(
     feed_id: Option<i64>,
     entry_id: Option<i64>,
 ) -> AppResult<()> {
+    debug!("Starting Link Insertion...");
     let mut builder = LinkBuilder::new();
 
     for link in links {
@@ -731,6 +765,7 @@ pub async fn insert_links(
             .length(link.length)
             .build()?;
 
+        debug!("Inserting new link...");
         query!(
             r#"
             INSERT INTO link (href, rel, media_type, href_lang, title, length)
@@ -746,6 +781,7 @@ pub async fn insert_links(
         .execute(&mut *conn)
         .await?;
 
+        debug!("Returning Link ID...");
         let ret_link = query_as!(
             Link,
             r#"
@@ -765,11 +801,8 @@ pub async fn insert_links(
 
             query!(
                 r#"
-                insert into entry_link (link_id, entry_id)
-                VALUES (
-                    (SELECT id FROM link WHERE link.id = $1),
-                    (SELECT id FROM entry WHERE entry.id = $2)
-                );
+                INSERT INTO entry_link (link_id, entry_id)
+                VALUES ($1, $2)
                 "#,
                 ret_link.id,
                 e_id
@@ -782,11 +815,8 @@ pub async fn insert_links(
 
         query!(
             r#"
-            insert into feed_link (link_id, feed_id)
-            values (
-                (SELECT id FROM link WHERE link.id = $1),
-                (SELECT id FROM feed WHERE feed.id = $2)
-            );
+            INSERT INTO feed_link (link_id, feed_id)
+            VALUES ($1, $2)
             "#,
             ret_link.id,
             f_id
@@ -842,18 +872,8 @@ pub async fn insert_link(
         SELECT *
         FROM link
         WHERE link.href = $1
-        AND link.rel = $2
-        AND link.media_type = $3
-        AND link.href_lang = $4
-        AND link.title = $5
-        AND link.length = $6
         "#,
         new_link.href,
-        new_link.rel,
-        new_link.media_type,
-        new_link.href_lang,
-        new_link.title,
-        new_link.length
     )
     .fetch_one(&mut *conn)
     .await?;
@@ -862,10 +882,7 @@ pub async fn insert_link(
         query!(
             r#"
             insert into feed_link (link_id, feed_id)
-            values (
-                (SELECT id FROM link WHERE link.id = $1),
-                (SELECT id FROM feed WHERE feed.id = $2)
-            );
+            values ($1, $2)
             "#,
             ret_link.id,
             f_id
@@ -880,10 +897,7 @@ pub async fn insert_link(
         query!(
             r#"
             insert into entry_link (link_id, entry_id)
-            VALUES (
-                (SELECT id FROM link WHERE link.id = $1),
-                (SELECT id FROM entry WHERE entry.id = $2)
-            );
+            VALUES ($1, $2)
             "#,
             ret_link.id,
             e_id
@@ -946,10 +960,7 @@ async fn insert_categories(
             query!(
                 r#"
                 INSERT INTO entry_category (category_id, entry_id)
-                VALUES (
-                    (SELECT id FROM category WHERE category.id = $1),
-                    (SELECT id FROM entry WHERE entry.id = $2)
-                )
+                VALUES ($1, $2)
                 "#,
                 ret_category.id,
                 e_id
@@ -963,10 +974,7 @@ async fn insert_categories(
         query!(
             r#"
             INSERT INTO feed_category (category_id, feed_id)
-            VALUES (
-                (SELECT id FROM category WHERE category.id = $1),
-                (SELECT id FROM feed WHERE feed.id = $2)
-            )
+            VALUES ($1, $2)
             "#,
             ret_category.id,
             f_id
@@ -983,8 +991,11 @@ async fn insert_content(
     content_opt: Option<model::Content>,
 ) -> AppResult<Option<i64>> {
     let Some(content) = content_opt else {
+        debug!("No Content for this entry");
         return Ok(None);
     };
+
+    debug!("Starting Content Insertion...");
 
     let Some(link) = content.src else {
         let mut con_builder = ContentBuilder::new();
@@ -999,7 +1010,7 @@ async fn insert_content(
         query!(
             r#"
             INSERT INTO content (body, content_type, length, src)
-            VALUES ($1, $2, $3, (SELECT id FROM link WHERE link.href = $4))
+            VALUES ($1, $2, $3, $4)
             "#,
             new_content.body,
             new_content.content_type,
@@ -1061,18 +1072,8 @@ async fn insert_content(
         SELECT *
         FROM link
         WHERE link.href = $1
-        AND link.rel = $2
-        AND link.media_type = $3
-        AND link.href_lang = $4
-        AND link.title = $5
-        AND link.length = $6
         "#,
         new_link.href,
-        new_link.rel,
-        new_link.media_type,
-        new_link.href_lang,
-        new_link.title,
-        new_link.length
     )
     .fetch_one(&mut *conn)
     .await?;
@@ -1091,7 +1092,7 @@ async fn insert_content(
             $1,
             $2,
             $3,
-            (SELECT id FROM link WHERE link.id = $4)
+            $4
         )
         "#,
         new_content.body,
@@ -1126,8 +1127,11 @@ pub async fn insert_media(
     media: Option<model::MediaObject>,
 ) -> AppResult<Option<i64>> {
     let Some(media) = media else {
+        debug!("No Media for this entry");
         return Ok(None);
     };
+
+    debug!("Starting Media Insertion...");
 
     let mut media_builder = MediaBuilder::new();
 
@@ -1214,10 +1218,7 @@ pub async fn insert_media(
             query!(
                 r#"
                 INSERT INTO media_link (link_id, media_id)
-                VALUES (
-                    (SELECT id FROM link WHERE link.id = $1),
-                    (SELECT id FROM media WHERE media.id = $2)
-                )
+                VALUES ($1, $2)
                 "#,
                 ret_link.id,
                 ret_media.id
@@ -1271,16 +1272,6 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
             )
             .execute(&mut *conn)
             .await?;
-
-            query!(
-                r#"
-                DELETE FROM link
-                WHERE link.id = $1
-                "#,
-                link.id
-            )
-            .execute(&mut *conn)
-            .await?;
         }
     }
 
@@ -1297,16 +1288,6 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
             )
             .execute(&mut *conn)
             .await?;
-
-            query!(
-                r#"
-                DELETE FROM author
-                WHERE author.id = $1
-                "#,
-                author.id
-            )
-            .execute(&mut *conn)
-            .await?;
         }
     }
 
@@ -1320,16 +1301,6 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
                 "#,
                 category.id,
                 feed_id
-            )
-            .execute(&mut *conn)
-            .await?;
-
-            query!(
-                r#"
-                DELETE FROM category
-                WHERE category.id = $1
-                "#,
-                category.id
             )
             .execute(&mut *conn)
             .await?;
@@ -1394,30 +1365,8 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
             )
             .execute(&mut *conn)
             .await?;
-
-            query!(
-                r#"
-                DELETE FROM author
-                WHERE author.id = $1
-                "#,
-                author.id
-            )
-            .execute(&mut *conn)
-            .await?;
         }
     }
-
-    if let Some(content_id) = entry.content_id {
-        query!(
-            r#"
-            DELETE FROM content
-            WHERE content.id = $1
-            "#,
-            content_id
-        )
-        .execute(&mut *conn)
-        .await?;
-    };
 
     if let Some(media_id) = entry.media_id {
         if let Ok(media_links) = select_all_media_links(conn, &media_id).await {
@@ -1435,16 +1384,6 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
                 .await?;
             }
         }
-
-        query!(
-            r#"
-            DELETE FROM media
-            WHERE media.id = $1
-            "#,
-            media_id
-        )
-        .execute(&mut *conn)
-        .await?;
     };
 
     if let Ok(categories) = select_all_entry_categories(conn, &entry_id).await {
@@ -1457,16 +1396,6 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
                 "#,
                 category.id,
                 entry.id
-            )
-            .execute(&mut *conn)
-            .await?;
-
-            query!(
-                r#"
-                DELETE FROM category
-                WHERE category.id = $1
-                "#,
-                category.id
             )
             .execute(&mut *conn)
             .await?;

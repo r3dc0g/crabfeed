@@ -1,3 +1,5 @@
+use std::sync::mpsc;
+
 use crate::data::data::DataEvent;
 
 #[derive(thiserror::Error, Debug)]
@@ -9,7 +11,16 @@ pub enum Error {
     Static(&'static str),
 
     #[error(transparent)]
-    Connection(#[from] sqlx::Error),
+    ConnectionError(#[from] sqlx::Error),
+
+    #[error(transparent)]
+    SendError(#[from] mpsc::SendError<DataEvent>),
+
+    #[error(transparent)]
+    NextRecvError(#[from] tokio::sync::mpsc::error::TryRecvError),
+
+    #[error(transparent)]
+    MigrationError(#[from] sqlx::migrate::MigrateError),
 
     #[error(transparent)]
     EnvVar(#[from] std::env::VarError),
@@ -28,9 +39,6 @@ pub enum Error {
 
     #[error(transparent)]
     HTMLParsing(#[from] html_parser::Error),
-
-    #[error(transparent)]
-    SendError(#[from] std::sync::mpsc::SendError<DataEvent>),
 
     #[error(transparent)]
     RecvTimeout(#[from] std::sync::mpsc::RecvTimeoutError),

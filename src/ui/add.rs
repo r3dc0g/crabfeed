@@ -104,9 +104,7 @@ impl View for Add {
                 let url = self.input.iter().collect::<String>().replace("\n", "");
                 self.reset();
                 Some(Box::new(move |app| {
-                    app.is_loading = true;
-                    app.ui.is_loading = true;
-                    app.data_handler.dispatch(DataEvent::AddFeed(url.clone()))?;
+                    app.dispatch(DataEvent::AddFeed(url.clone()))?;
                     app.ui.back();
                     Ok(())
                 }))

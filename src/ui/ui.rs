@@ -5,7 +5,7 @@ use super::feeds::Feeds;
 use super::View;
 use super::{components::*, UiCallback};
 use crate::app::{ActiveBlock, Route, RouteId};
-use crate::config::{get_configuration, Settings};
+use crate::config::Settings;
 use crate::data::data::DataEvent;
 use crate::prelude::{EntryData, FeedData};
 
@@ -26,12 +26,11 @@ pub struct Ui {
 }
 
 impl Ui {
-    pub fn new() -> Self {
+    pub fn new(config: Settings) -> Self {
         let mut feeds = Feeds::new(None);
         feeds.select(true);
         let entries = Entries::new(None);
         let entry = EntryView::new(None);
-        let config = get_configuration().unwrap_or_default();
 
         Self {
             navigation_stack: vec![Route::default()],
@@ -58,8 +57,16 @@ impl Ui {
         self.navigation_stack.pop();
     }
 
-    pub fn update_entries(&mut self, entries: Vec<EntryData>) {
+    pub fn update_entries(&mut self, entries: Vec<Vec<EntryData>>) {
         self.entries.update_entries(entries);
+    }
+
+    pub fn next_entries(&mut self) {
+        self.entries.next_index();
+    }
+
+    pub fn prev_entries(&mut self) {
+        self.entries.prev_index();
     }
 
     pub fn update_feeds(&mut self, feeds: Vec<FeedData>) {

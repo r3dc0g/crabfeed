@@ -11,21 +11,24 @@ use super::{components::*, UiCallback};
 
 pub struct Entries {
     list_state: ListState,
-    entry_items: Vec<EntryData>,
+    index: usize,
+    entry_items: Vec<Vec<EntryData>>,
     selected: bool,
 }
 
 impl Entries {
-    pub fn new(entries: Option<Vec<EntryData>>) -> Self {
+    pub fn new(entries: Option<Vec<Vec<EntryData>>>) -> Self {
         match entries {
             Some(entry_data) => Self {
                 list_state: ListState::default(),
                 entry_items: entry_data,
+                index: 0,
                 selected: false,
             },
             None => Self {
                 list_state: ListState::default(),
                 entry_items: vec![],
+                index: 0,
                 selected: false,
             },
         }
@@ -35,14 +38,32 @@ impl Entries {
         self.selected = selected;
     }
 
-    pub fn update_entries(&mut self, entries: Vec<EntryData>) {
-        let mut items = entries;
-        items.reverse();
-        self.entry_items = items;
+    pub fn next_index(&mut self) {
+        if !self.entry_items.is_empty() {
+            if self.index + 1 > self.entry_items.len() - 1 {
+                self.index = 0;
+            } else {
+                self.index += 1;
+            }
+        }
     }
 
-    pub fn reset(&mut self) {
-        self.list_state.select(None);
+    pub fn prev_index(&mut self) {
+        if !self.entry_items.is_empty() {
+            if self.index == 0 {
+                self.index = self.entry_items.len() - 1;
+            } else {
+                self.index -= 1;
+            }
+        }
+    }
+
+    pub fn update_entries(&mut self, entries: Vec<Vec<EntryData>>) {
+        let mut item_groups = entries;
+        for group in item_groups.iter_mut() {
+            group.reverse();
+        }
+        self.entry_items = item_groups;
     }
 }
 
@@ -52,11 +73,26 @@ impl View for Entries {
         let selected_style = Style::default().fg(primary);
         let unselected_style = Style::default();
 
-        let entries: Vec<(bool, String)> = self
-            .entry_items
+        if self.entry_items.is_empty() {
+            let empty_entries: Vec<String> = vec![];
+            ItemList::new(&empty_entries)
+                .title(Some("Entries (0/0)".to_string()))
+                .style(match self.selected {
+                    true => selected_style,
+                    false => unselected_style,
+                })
+                .render(area, buf, &mut self.list_state.clone());
+
+            return;
+        };
+
+        let items = &self.entry_items[self.index];
+
+        let entries: Vec<(bool, String)> = items
             .iter()
             .map(|entry| (entry.read.clone(), entry.title.clone()))
             .collect();
+
         let list_len = entries.len();
         let mut unread_len = 0;
         let unread_marker = "*";
@@ -105,39 +141,52 @@ impl View for Entries {
     fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key.code {
             KeyCode::Char('j') | KeyCode::Down => {
-                if let Some(index) = self.list_state.selected() {
-                    if index < self.entry_items.len() - 1 {
-                        self.list_state.select_next();
-                    } else {
+                if !self.entry_items[self.index].is_empty() {
+                    if let Some(index) = self.list_state.selected() {
+                        if index < self.entry_items[self.index].len() - 1 {
+                            self.list_state.select_next();
+                        } else {
+                            self.list_state.select_first();
+                        }
+                    } else if self.entry_items[self.index].len() > 0 {
                         self.list_state.select_first();
                     }
-                } else if self.entry_items.len() > 0 {
-                    self.list_state.select_first();
                 }
 
                 return None;
             }
             KeyCode::Char('k') | KeyCode::Up => {
-                if let Some(index) = self.list_state.selected() {
-                    if index > 0 {
-                        self.list_state.select(Some(index - 1));
-                    } else {
-                        self.list_state.select(Some(self.entry_items.len() - 1));
+                if !self.entry_items[self.index].is_empty() {
+                    if let Some(index) = self.list_state.selected() {
+                        if index > 0 {
+                            self.list_state.select(Some(index - 1));
+                        } else {
+                            self.list_state
+                                .select(Some(self.entry_items[self.index].len() - 1));
+                        }
+                    } else if self.entry_items[self.index].len() > 0 {
+                        self.list_state
+                            .select(Some(self.entry_items[self.index].len() - 1));
                     }
-                } else if self.entry_items.len() > 0 {
-                    self.list_state.select(Some(self.entry_items.len() - 1));
                 }
                 return None;
             }
             KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => {
-                let entry = Some(self.entry_items[self.list_state.selected().unwrap_or(0)].clone());
+                if !self.entry_items[self.index].is_empty() {
+                    let entry = Some(
+                        self.entry_items[self.index][self.list_state.selected().unwrap_or(0)]
+                            .clone(),
+                    );
 
-                return Some(Box::new(move |app| {
-                    app.ui
-                        .set_current_route(Route::new(RouteId::Entry, ActiveBlock::Entry));
-                    app.ui.set_entry(entry.clone());
-                    Ok(())
-                }));
+                    return Some(Box::new(move |app| {
+                        app.ui
+                            .set_current_route(Route::new(RouteId::Entry, ActiveBlock::Entry));
+                        app.ui.set_entry(entry.clone());
+                        Ok(())
+                    }));
+                }
+
+                None
             }
             KeyCode::Char('h') | KeyCode::Right => {
                 return Some(Box::new(move |app| {

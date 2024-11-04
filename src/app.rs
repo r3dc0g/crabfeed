@@ -1,3 +1,4 @@
+use crate::config::Settings;
 use crate::data::data::{DataEvent, DataHandler};
 use crate::event::{EventHandler, TerminalEvent};
 use crate::time::Tick;
@@ -46,12 +47,12 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(config: Settings) -> Self {
         App {
             is_running: true,
             is_loading: false,
-            ui: Ui::new(),
-            data_handler: DataHandler::new(),
+            ui: Ui::new(config.clone()),
+            data_handler: DataHandler::new(config.database_url.clone()),
         }
     }
 
@@ -59,6 +60,8 @@ impl App {
         let backend = CrosstermBackend::new(io::stdout());
         let event_handler = EventHandler::new();
         let mut tui = Tui::new(backend, event_handler)?;
+
+        self.dispatch(DataEvent::ReloadFeeds)?;
 
         while self.is_running {
             match tui.event_handler.next()? {
@@ -82,7 +85,16 @@ impl App {
                 }
             }
         }
+        self.data_handler.abort();
         tui.exit()?;
+        Ok(())
+    }
+
+    pub fn dispatch(&mut self, event: DataEvent) -> AppResult<()> {
+        self.is_loading = true;
+        self.ui.is_loading = true;
+
+        self.data_handler.dispatch(event)?;
         Ok(())
     }
 
@@ -124,10 +136,17 @@ impl App {
                         self.ui.loading_msg = message;
                     }
                     DataEvent::ReloadedFeeds(feeds) => {
+                        let feed_ids: Vec<i64> = feeds.iter().map(|f| f.id).collect();
                         self.ui.update_feeds(feeds);
+                        self.dispatch(DataEvent::ReloadEntries(feed_ids))
+                            .expect("Couldn't send ReloadEntries event");
                     }
                     DataEvent::ReloadedEntries(entries) => {
+                        self.ui.next_entries();
                         self.ui.update_entries(entries);
+                    }
+                    DataEvent::Error(_) => {
+                        self.is_running = false;
                     }
                     _ => {}
                 }

@@ -2,7 +2,6 @@ use crate::app::ActiveBlock;
 use crate::app::Route;
 use crate::app::RouteId;
 use crate::config::Settings;
-use crate::data::data::DataEvent;
 use crate::prelude::FeedData;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
@@ -88,11 +87,8 @@ impl View for Feeds {
                     self.list_state.select_first();
                 }
 
-                let feed = self.get_selected_feed().expect("Feed wasn't selected");
-
                 return Some(Box::new(move |app| {
-                    app.data_handler
-                        .dispatch(DataEvent::ReloadEntries(feed.id.clone()))?;
+                    app.ui.next_entries();
                     Ok(())
                 }));
             }
@@ -110,11 +106,8 @@ impl View for Feeds {
                     self.list_state.select(Some(self.feed_items.len() - 1));
                 }
 
-                let feed = self.get_selected_feed().expect("Feed wasn't selected");
-
                 return Some(Box::new(move |app| {
-                    app.data_handler
-                        .dispatch(DataEvent::ReloadEntries(feed.id.clone()))?;
+                    app.ui.prev_entries();
                     Ok(())
                 }));
             }

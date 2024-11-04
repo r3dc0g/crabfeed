@@ -4,5 +4,5 @@
 /.env
 /urls
 /backups
-
+/tests/test_db
 .nvim-dap.lua
