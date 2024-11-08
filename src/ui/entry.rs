@@ -2,7 +2,6 @@ use super::components::*;
 use super::util::{parse_hex, parse_html};
 use super::{UiCallback, View};
 use crate::config::Settings;
-use crate::data::data::DataEvent;
 use crate::prelude::EntryData;
 use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent};

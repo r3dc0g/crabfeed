@@ -1,5 +1,6 @@
 use crate::config::Settings;
-use crate::data::data::{DataEvent, DataHandler};
+use crate::data::data::{Cache, DataEvent, DataHandler};
+use crate::error::Error;
 use crate::event::{EventHandler, TerminalEvent};
 use crate::time::Tick;
 use crate::tui::Tui;
@@ -39,11 +40,21 @@ impl Route {
     }
 }
 
+#[derive(Debug)]
+pub enum AppEvent {
+    Complete,
+    Error(Box<Error>),
+    Updating(String),
+    Deleting(String),
+    FeshData(Cache)
+}
+
 pub struct App {
     pub is_running: bool,
     pub is_loading: bool,
     pub ui: Ui,
     pub data_handler: DataHandler,
+    pub running_data_calls: u16,
 }
 
 impl App {
@@ -53,6 +64,7 @@ impl App {
             is_loading: false,
             ui: Ui::new(config.clone()),
             data_handler: DataHandler::new(config.database_url.clone()),
+            running_data_calls: 0,
         }
     }
 
@@ -61,7 +73,7 @@ impl App {
         let event_handler = EventHandler::new();
         let mut tui = Tui::new(backend, event_handler)?;
 
-        self.dispatch(DataEvent::ReloadFeeds)?;
+        self.dispatch(DataEvent::Refresh)?;
 
         while self.is_running {
             match tui.event_handler.next()? {
@@ -91,6 +103,7 @@ impl App {
     }
 
     pub fn dispatch(&mut self, event: DataEvent) -> AppResult<()> {
+        self.running_data_calls += 1;
         self.is_loading = true;
         self.ui.is_loading = true;
 
@@ -125,30 +138,26 @@ impl App {
         if self.is_loading {
             if let Ok(event) = self.data_handler.next() {
                 match event {
-                    DataEvent::Complete => {
-                        self.is_loading = false;
-                        self.ui.is_loading = false;
+                    AppEvent::Complete => {
+                        self.running_data_calls -= 1;
+                        if self.running_data_calls == 0 {
+                            self.is_loading = false;
+                            self.ui.is_loading = false;
+                        }
                     }
-                    DataEvent::Updating(message) => {
+                    AppEvent::Updating(message) => {
                         self.ui.loading_msg = message;
                     }
-                    DataEvent::Deleting(message) => {
+                    AppEvent::Deleting(message) => {
                         self.ui.loading_msg = message;
                     }
-                    DataEvent::ReloadedFeeds(feeds) => {
-                        let feed_ids: Vec<i64> = feeds.iter().map(|f| f.id).collect();
-                        self.ui.update_feeds(feeds);
-                        self.dispatch(DataEvent::ReloadEntries(feed_ids))
-                            .expect("Couldn't send ReloadEntries event");
+                    AppEvent::FeshData(data) => {
+                        self.ui.update_feeds(data.feeds);
+                        self.ui.update_entries(data.entries);
                     }
-                    DataEvent::ReloadedEntries(entries) => {
-                        self.ui.next_entries();
-                        self.ui.update_entries(entries);
-                    }
-                    DataEvent::Error(_) => {
+                    AppEvent::Error(_) => {
                         self.is_running = false;
                     }
-                    _ => {}
                 }
             }
         }

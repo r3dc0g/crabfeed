@@ -34,11 +34,6 @@ impl Feeds {
         }
     }
 
-    pub fn get_selected_feed(&self) -> Option<FeedData> {
-        let index = self.list_state.selected()?;
-        self.feed_items.get(index).cloned()
-    }
-
     pub fn select(&mut self, selected: bool) {
         self.selected = selected;
     }
@@ -85,6 +80,7 @@ impl View for Feeds {
                     }
                 } else {
                     self.list_state.select_first();
+                    return None;
                 }
 
                 return Some(Box::new(move |app| {

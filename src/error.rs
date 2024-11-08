@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 
-use crate::data::data::DataEvent;
+use crate::app::AppEvent;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -11,10 +11,10 @@ pub enum Error {
     Static(&'static str),
 
     #[error(transparent)]
-    ConnectionError(#[from] sqlx::Error),
+    SqlxError(#[from] sqlx::Error),
 
     #[error(transparent)]
-    SendError(#[from] mpsc::SendError<DataEvent>),
+    SendError(#[from] mpsc::SendError<AppEvent>),
 
     #[error(transparent)]
     NextRecvError(#[from] tokio::sync::mpsc::error::TryRecvError),

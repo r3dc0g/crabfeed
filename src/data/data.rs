@@ -1,9 +1,10 @@
+use crate::app::AppEvent;
 use crate::error::Error;
 use crate::prelude::{EntryData, FeedData};
 use crate::AppResult;
 
 use super::db::{
-    connect, delete_feed, insert_feed, insert_link, mark_entry_read, select_all_entries,
+    self, connect, insert_feed, insert_link, mark_entry_read, select_all_entries,
     select_all_entry_links, select_all_feed_links, select_all_feeds, select_feed,
     update_feed_title,
 };
@@ -12,24 +13,25 @@ use log::debug;
 use reqwest;
 
 #[derive(Debug)]
+pub struct Cache {
+    pub feeds: Vec<FeedData>,
+    pub entries: Vec<Vec<EntryData>>,
+}
+
+#[derive(Debug)]
 pub enum DataEvent {
-    Complete,
     Error(Box<Error>),
     Updating(String),
     UpdateFeeds,
     AddFeed(String),
     DeleteFeed(i64),
-    Deleting(String),
-    ReloadFeeds,
-    ReloadedFeeds(Vec<FeedData>),
-    ReloadEntries(Vec<i64>),
-    ReloadedEntries(Vec<Vec<EntryData>>),
+    Refresh,
     ReadEntry(i64),
 }
 
 pub struct DataHandler {
     sender: std::sync::mpsc::Sender<DataEvent>,
-    receiver: tokio::sync::mpsc::Receiver<DataEvent>,
+    receiver: tokio::sync::mpsc::Receiver<AppEvent>,
     handler: tokio::task::JoinHandle<()>,
 }
 
@@ -46,7 +48,7 @@ impl DataHandler {
                 loop {
                     if let Ok(event) = sync_receiver.recv() {
                         debug!("Handling {:?}", event);
-                        DataHandler::handle_event(
+                        handle_event(
                             database_url.clone(),
                             event,
                             moved_sender.clone(),
@@ -69,7 +71,7 @@ impl DataHandler {
         Ok(self.sender.send(event).expect("Failed to send event"))
     }
 
-    pub fn next(&mut self) -> AppResult<DataEvent> {
+    pub fn next(&mut self) -> AppResult<AppEvent> {
         Ok(self.receiver.try_recv()?)
     }
 
@@ -81,247 +83,216 @@ impl DataHandler {
         self.handler.abort();
     }
 
-    // Handle Event
-    pub async fn handle_event(
-        database_url: String,
-        event: DataEvent,
-        sender: tokio::sync::mpsc::Sender<DataEvent>,
-    ) -> AppResult<()> {
-        debug!("Handling Data Event...");
-        match event {
-            DataEvent::UpdateFeeds => {
-                DataHandler::update_feeds(database_url, sender.clone()).await?;
-            }
-            DataEvent::AddFeed(url) => {
-                DataHandler::add_feed(database_url, url, sender.clone()).await?;
-            }
-            DataEvent::DeleteFeed(id) => {
-                DataHandler::delete_feed(database_url, sender.clone(), id).await?;
-            }
-            DataEvent::ReloadFeeds => {
-                DataHandler::reload_feeds(database_url, sender.clone()).await?;
-            }
-            DataEvent::ReloadEntries(feed_ids) => {
-                DataHandler::reload_entries(database_url, sender.clone(), &feed_ids).await?;
-            }
-            DataEvent::ReadEntry(entry_id) => {
-                DataHandler::read_entry(database_url, &entry_id, sender.clone()).await?;
-            }
-            _ => {}
-        }
+}
 
-        Ok(())
+// Handle Event
+pub async fn handle_event(
+    database_url: String,
+    event: DataEvent,
+    sender: tokio::sync::mpsc::Sender<AppEvent>,
+) -> AppResult<()> {
+    debug!("Handling Data Event...");
+    match event {
+        DataEvent::UpdateFeeds => {
+            update_feeds(database_url, sender.clone()).await?;
+        }
+        DataEvent::AddFeed(url) => {
+            add_feed(database_url, url, sender.clone()).await?;
+        }
+        DataEvent::DeleteFeed(id) => {
+            delete_feed(database_url, sender.clone(), id).await?;
+        }
+        DataEvent::Refresh => {
+            refresh(database_url, sender.clone()).await?;
+        }
+        DataEvent::ReadEntry(entry_id) => {
+            read_entry(database_url, &entry_id, sender.clone()).await?;
+        }
+        _ => {}
     }
 
-    // Fetch feeds and update the app state
-    async fn update_feeds(
-        database_url: String,
-        sender: tokio::sync::mpsc::Sender<DataEvent>,
-    ) -> AppResult<()> {
-        debug!("Updating Feeds...");
+    Ok(())
+}
 
-        let conn = &mut connect(database_url).await?;
+// Fetch feeds and update the app state
+async fn update_feeds(
+    database_url: String,
+    sender: tokio::sync::mpsc::Sender<AppEvent>,
+) -> AppResult<()> {
+    debug!("Updating Feeds...");
 
-        let feed_items = select_all_feeds(conn).await?;
+    let conn = &mut connect(database_url).await?;
 
-        let mut new_feeds = vec![];
+    let feed_items = select_all_feeds(conn).await?;
 
-        for feed in feed_items.iter() {
-            sender
-                .send(DataEvent::Updating(format!(
-                    "Updating {}...",
-                    feed.title.clone().unwrap_or("Untitled Feed".to_string())
-                )))
-                .await
-                .expect("Failed to send DataEvent::Updating");
+    let mut new_feeds = vec![];
 
-            let links = select_all_feed_links(conn, &feed.id).await?;
+    for feed in feed_items.iter() {
+        sender
+            .send(AppEvent::Updating(format!(
+                "Updating {}...",
+                feed.title.clone().unwrap_or("Untitled Feed".to_string())
+            )))
+            .await
+            .expect("Failed to send DataEvent::Updating");
 
-            for link in links.iter() {
-                if let Ok(res) = reqwest::get(link.href.clone()).await {
-                    if let Ok(content) = res.text().await {
-                        let new_feed = parser::parse(content.as_bytes());
+        let links = select_all_feed_links(conn, &feed.id).await?;
 
-                        if let Ok(neofeed) = new_feed {
-                            if let Some(new_title) = &neofeed.title {
-                                if let Some(old_title) = &feed.title {
-                                    if new_title.content != *old_title {
-                                        update_feed_title(
-                                            conn,
-                                            &feed.id,
-                                            new_title.content.clone(),
-                                        )
-                                        .await?;
-                                    }
+        for link in links.iter() {
+            if let Ok(res) = reqwest::get(link.href.clone()).await {
+                if let Ok(content) = res.text().await {
+                    let new_feed = parser::parse(content.as_bytes());
+
+                    if let Ok(neofeed) = new_feed {
+                        if let Some(new_title) = &neofeed.title {
+                            if let Some(old_title) = &feed.title {
+                                if new_title.content != *old_title {
+                                    update_feed_title(
+                                        conn,
+                                        &feed.id,
+                                        new_title.content.clone(),
+                                    )
+                                    .await?;
                                 }
                             }
-                            new_feeds.push(neofeed);
-                        };
-                    }
+                        }
+                        new_feeds.push(neofeed);
+                    };
                 }
             }
         }
+    }
 
-        //Update the database
-        for feed in new_feeds {
-            insert_feed(conn, feed).await?;
+    //Update the database
+    for feed in new_feeds {
+        insert_feed(conn, feed).await?;
+    }
+
+    sender
+        .send(AppEvent::Complete)
+        .await
+        .expect("Failed to send DataEvent::Complete");
+
+    Ok(())
+}
+
+async fn add_feed(
+    database_url: String,
+    feed_url: String,
+    sender: tokio::sync::mpsc::Sender<AppEvent>,
+) -> AppResult<()> {
+    debug!("Adding {feed_url}...");
+    let content = reqwest::get(feed_url.as_str()).await?.text().await.expect("Failed to get feed data");
+
+    let feed = parser::parse(content.as_bytes());
+
+    if let Ok(feed) = feed {
+        let conn = &mut connect(database_url).await.expect("Failed to connect to Database");
+        let feed_id = insert_feed(conn, feed).await?;
+
+        insert_link(conn, feed_url, Some(feed_id), None).await.expect("Failed to insert link");
+    }
+
+    sender
+        .send(AppEvent::Complete)
+        .await
+        .expect("Failed to send DataEvent::Complete");
+
+    Ok(())
+}
+
+async fn delete_feed(
+    database_url: String,
+    sender: tokio::sync::mpsc::Sender<AppEvent>,
+    feed_id: i64,
+) -> AppResult<()> {
+    debug!("Deleting Feed...");
+    let conn = &mut connect(database_url).await?;
+
+    let feed = select_feed(conn, &feed_id).await?;
+
+    sender
+        .send(AppEvent::Deleting(format!(
+            "Deleting {}...",
+            feed.title.unwrap_or("Untitled Feed".to_string())
+        )))
+        .await
+        .expect("Failed to send Deleting event");
+
+    db::delete_feed(conn, feed_id).await?;
+
+    sender
+        .send(AppEvent::Complete)
+        .await
+        .expect("Failed to send DataEvent::Complete");
+
+    Ok(())
+}
+
+async fn refresh(database_url: String, sender: tokio::sync::mpsc::Sender<AppEvent>) -> AppResult<()> {
+    debug!("Refreshing data...");
+
+    let conn = &mut connect(database_url).await.expect("Failed to connect to Database");
+
+    let feeds = select_all_feeds(conn)
+        .await
+        .expect("Failed to select all Feeds");
+    let mut feed_data = vec![];
+
+    for feed in feeds {
+        let mut data = FeedData::from(feed.clone());
+
+        if let Some(link) = select_all_feed_links(conn, &feed.id)
+            .await
+            .expect("Failed to connect to Database")
+            .first()
+        {
+            data.update_url(link.href.clone());
         }
 
-        sender
-            .send(DataEvent::Complete)
-            .await
-            .expect("Failed to send DataEvent::Complete");
-
-        Ok(())
+        feed_data.push(data);
     }
 
-    async fn add_feed(
-        database_url: String,
-        feed_url: String,
-        sender: tokio::sync::mpsc::Sender<DataEvent>,
-    ) -> AppResult<()> {
-        debug!("Adding {feed_url}...");
-        let content = reqwest::get(feed_url.as_str()).await?.text().await?;
+    let feed_ids: Vec<i64> = feed_data.iter().map(|f| f.id).collect();
+    let mut entry_groups = vec![];
 
-        let feed = parser::parse(content.as_bytes());
+    for id in feed_ids {
+        let entries = select_all_entries(conn, &id).await?;
+        let mut entry_data = vec![];
 
-        if let Ok(feed) = feed {
-            let conn = &mut connect(database_url).await?;
-            let feed_id = insert_feed(conn, feed).await?;
+        for entry in entries {
+            let mut data = EntryData::from(entry.clone());
 
-            insert_link(conn, feed_url, Some(feed_id), None).await?;
+            // TODO: handle entry description
+
+            let links = select_all_entry_links(conn, &entry.id).await?;
+            data.update_links(links);
+            entry_data.push(data);
         }
 
-        sender
-            .send(DataEvent::Complete)
-            .await
-            .expect("Failed to send DataEvent::Complete");
-
-        Ok(())
+        entry_groups.push(entry_data);
     }
 
-    async fn delete_feed(
-        database_url: String,
-        sender: tokio::sync::mpsc::Sender<DataEvent>,
-        feed_id: i64,
-    ) -> AppResult<()> {
-        debug!("Deleting Feed...");
-        let conn = &mut connect(database_url).await?;
+    sender.send(AppEvent::FeshData(Cache {feeds: feed_data, entries: entry_groups})).await.expect("Failed to send AppEvent::FeshData");
 
-        let feed = select_feed(conn, &feed_id).await?;
+    sender.send(AppEvent::Complete).await.expect("Failed to send AppEvent::Complete");
 
-        sender
-            .send(DataEvent::Deleting(format!(
-                "Deleting {}...",
-                feed.title.unwrap_or("Untitled Feed".to_string())
-            )))
-            .await
-            .expect("Failed to send Deleting event");
+    Ok(())
+}
 
-        delete_feed(conn, feed_id).await?;
+async fn read_entry(
+    database_url: String,
+    entry_id: &i64,
+    sender: tokio::sync::mpsc::Sender<AppEvent>,
+) -> AppResult<()> {
+    let conn = &mut connect(database_url).await?;
 
-        sender
-            .send(DataEvent::Complete)
-            .await
-            .expect("Failed to send DataEvent::Complete");
+    mark_entry_read(conn, entry_id).await?;
 
-        Ok(())
-    }
+    sender
+        .send(AppEvent::Complete)
+        .await
+        .expect("Failed to send DataEvent::Complete");
 
-    async fn reload_feeds(
-        database_url: String,
-        sender: tokio::sync::mpsc::Sender<DataEvent>,
-    ) -> AppResult<()> {
-        debug!("Reloading Feeds...");
-        let conn = &mut connect(database_url)
-            .await
-            .expect("Failed to connect to Database");
-
-        let feeds = select_all_feeds(conn)
-            .await
-            .expect("Failed to select all Feeds");
-        let mut feed_data = vec![];
-
-        for feed in feeds {
-            let mut data = FeedData::from(feed.clone());
-
-            if let Some(link) = select_all_feed_links(conn, &feed.id)
-                .await
-                .expect("Failed to connect to Database")
-                .first()
-            {
-                data.update_url(link.href.clone());
-            }
-
-            feed_data.push(data);
-        }
-
-        debug!("Sending Feeds out of Data Handler");
-        sender
-            .send(DataEvent::ReloadedFeeds(feed_data))
-            .await
-            .expect("Failed to send ReloadedFeeds");
-
-        // A Complete is not sent so that reloading the entries continues
-
-        Ok(())
-    }
-
-    async fn reload_entries(
-        database_url: String,
-        sender: tokio::sync::mpsc::Sender<DataEvent>,
-        feed_ids: &Vec<i64>,
-    ) -> AppResult<()> {
-        let conn = &mut connect(database_url).await?;
-
-        let mut entry_groups = vec![];
-
-        for id in feed_ids {
-            let entries = select_all_entries(conn, id).await?;
-            let mut entry_data = vec![];
-
-            for entry in entries {
-                let mut data = EntryData::from(entry.clone());
-
-                // TODO: handle entry description
-
-                let links = select_all_entry_links(conn, &entry.id).await?;
-                data.update_links(links);
-                entry_data.push(data);
-            }
-
-            entry_groups.push(entry_data);
-        }
-
-        debug!("Sending Entries out of Data Handler");
-        sender
-            .send(DataEvent::ReloadedEntries(entry_groups))
-            .await
-            .expect("Filed to send ReloadedEntries");
-
-        debug!("Complete ReloadedEntries");
-        sender
-            .send(DataEvent::Complete)
-            .await
-            .expect("Failed to send DataEvent::Complete");
-
-        Ok(())
-    }
-
-    async fn read_entry(
-        database_url: String,
-        entry_id: &i64,
-        sender: tokio::sync::mpsc::Sender<DataEvent>,
-    ) -> AppResult<()> {
-        let conn = &mut connect(database_url).await?;
-
-        mark_entry_read(conn, entry_id).await?;
-
-        sender
-            .send(DataEvent::Complete)
-            .await
-            .expect("Failed to send DataEvent::Complete");
-
-        Ok(())
-    }
+    Ok(())
 }

@@ -105,6 +105,7 @@ impl View for Add {
                 self.reset();
                 Some(Box::new(move |app| {
                     app.dispatch(DataEvent::AddFeed(url.clone()))?;
+                    app.dispatch(DataEvent::Refresh)?;
                     app.ui.back();
                     Ok(())
                 }))

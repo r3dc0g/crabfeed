@@ -2,8 +2,12 @@ use core::panic;
 use std::{env::current_dir, fs::create_dir_all, time::Duration};
 
 use crabfeed::{
+    app::AppEvent,
     config::{get_configuration, Settings},
-    data::data::{DataEvent, DataHandler},
+    data::{
+        data::{self, DataEvent},
+        db::{connect, select_entry},
+    },
     ui::util::parse_hex,
 };
 use env_logger::Target;
@@ -13,7 +17,7 @@ use tokio::time::sleep;
 use uuid::Uuid;
 
 #[tokio::test]
-async fn feeds_are_reloaded() {
+async fn data_is_refreshed() {
     // Start logger
     init_logger();
     let (sender, mut receiver) = tokio::sync::mpsc::channel(32);
@@ -22,7 +26,7 @@ async fn feeds_are_reloaded() {
     let db_url = get_test_database_url();
 
     // Handle a reload event
-    DataHandler::handle_event(db_url, DataEvent::ReloadFeeds, sender)
+    data::handle_event(db_url, DataEvent::Refresh, sender)
         .await
         .expect("Failed to handle ReloadFeeds event");
 
@@ -34,13 +38,27 @@ async fn feeds_are_reloaded() {
         .expect("Failed to receive ReloadFeeds(_) event");
 
     match event {
-        DataEvent::ReloadedFeeds(feeds) => {
+        AppEvent::FeshData(data) => {
             // Assert feeds were pulled, but none reside in the db
-            assert_eq!(feeds.len(), 0);
+            assert_eq!(data.feeds.len(), 0);
         }
-        DataEvent::Error(e) => {
+        AppEvent::Error(e) => {
             panic!("{}", e);
         }
+        e => {
+            panic!("Unexpected event received, {:?}", e);
+        }
+    }
+
+    sleep(Duration::from_secs(2)).await;
+
+    // Assert we get an event back
+    let complete = receiver
+        .try_recv()
+        .expect("Failed to receive ReloadFeeds(_) event");
+
+    match complete {
+        AppEvent::Complete => {}
         e => {
             panic!("Unexpected event received, {:?}", e);
         }
@@ -57,7 +75,7 @@ async fn feed_is_added() {
     let db_url = get_test_database_url();
 
     // Handle an insertion event
-    DataHandler::handle_event(
+    data::handle_event(
         db_url,
         DataEvent::AddFeed("https://archlinux.org/feeds/news/".to_string()),
         sender,
@@ -72,111 +90,7 @@ async fn feed_is_added() {
         .expect("Failed to receive response DataEvent");
 
     match event {
-        DataEvent::Complete => {}
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
-}
-
-#[tokio::test]
-async fn entries_are_reloaded() {
-    init_logger();
-    let (sender, mut receiver) = tokio::sync::mpsc::channel(32);
-
-    // Get fresh test data base
-    let db_url = get_test_database_url();
-
-    // Handle an insertion event
-    DataHandler::handle_event(
-        db_url.clone(),
-        DataEvent::AddFeed("https://archlinux.org/feeds/news/".to_string()),
-        sender.clone(),
-    )
-    .await
-    .expect("Failed to handle AddFeed event");
-
-    sleep(Duration::from_secs(2)).await;
-
-    let event = receiver
-        .try_recv()
-        .expect("Failed to receive response DataEvent");
-
-    match event {
-        DataEvent::Complete => {}
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
-
-    DataHandler::handle_event(db_url.clone(), DataEvent::ReloadFeeds, sender.clone())
-        .await
-        .expect("Failed to handle ReloadEntries event");
-
-    let mut feeds = vec![];
-
-    sleep(Duration::from_secs(2)).await;
-
-    match receiver
-        .try_recv()
-        .expect("Failed to receive response DataEvent")
-    {
-        DataEvent::ReloadedFeeds(data) => {
-            assert_eq!(data.len(), 1);
-            for feed in data {
-                feeds.push(feed);
-            }
-        }
-        DataEvent::Error(e) => {
-            panic!("Error: {e}");
-        }
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
-
-    let feed_ids: Vec<i64> = feeds.iter().map(|f| f.id).collect();
-
-    DataHandler::handle_event(
-        db_url.clone(),
-        DataEvent::ReloadEntries(feed_ids.clone()),
-        sender.clone(),
-    )
-    .await
-    .expect("Failed to handle ReloadEntries event");
-
-    let mut entries = vec![];
-
-    sleep(Duration::from_secs(2)).await;
-
-    match receiver
-        .try_recv()
-        .expect("Failed to receive response DataEvent")
-    {
-        DataEvent::ReloadedEntries(data) => {
-            assert_eq!(data.len(), 1);
-            assert_eq!(data[0].len(), 10);
-            for group in data {
-                for data in group {
-                    entries.push(data);
-                }
-            }
-        }
-        DataEvent::Error(e) => {
-            panic!("Error: {e}");
-        }
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
-
-    match receiver
-        .try_recv()
-        .expect("Failed to receive completed response DataEvent")
-    {
-        DataEvent::Complete => {
-            debug!("ReloadEntries completed");
-        }
+        AppEvent::Complete => {}
         e => {
             panic!("Unexpected event received, {:?}", e);
         }
@@ -193,7 +107,7 @@ async fn feed_is_deleted() {
     let db_url = get_test_database_url();
 
     // Handle an insertion event
-    DataHandler::handle_event(
+    data::handle_event(
         db_url.clone(),
         DataEvent::AddFeed("https://archlinux.org/feeds/news/".to_string()),
         sender.clone(),
@@ -203,12 +117,11 @@ async fn feed_is_deleted() {
 
     sleep(Duration::from_secs(2)).await;
 
-    let completed_event = receiver
+    match receiver
         .try_recv()
-        .expect("Failed to receive response DataEvent");
-
-    match completed_event {
-        DataEvent::Complete => {}
+        .expect("Failed to receive response DataEvent")
+    {
+        AppEvent::Complete => {}
         e => {
             panic!("Unexpected event received, {:?}", e);
         }
@@ -216,62 +129,30 @@ async fn feed_is_deleted() {
 
     sleep(Duration::from_secs(2)).await;
 
-    // Handle reload event
-    DataHandler::handle_event(db_url.clone(), DataEvent::ReloadFeeds, sender.clone())
+    // Handle a reload event
+    data::handle_event(db_url.clone(), DataEvent::Refresh, sender.clone())
         .await
         .expect("Failed to handle ReloadFeeds event");
 
-    let mut feeds = vec![];
-
     sleep(Duration::from_secs(2)).await;
+
+    let mut feeds = vec![];
 
     match receiver
         .try_recv()
-        .expect("Failed to receive response DataEvent")
+        .expect("Failed to receive ReloadFeeds(_) event")
     {
-        DataEvent::ReloadedFeeds(data) => {
-            assert_eq!(data.len(), 1);
-            for feed in data {
+        AppEvent::FeshData(data) => {
+            // Assert data was pulled
+            assert_eq!(data.feeds.len(), 1);
+            assert_eq!(data.entries[0].len(), 10);
+
+            for feed in data.feeds {
                 feeds.push(feed);
             }
         }
-        DataEvent::Error(e) => {
-            panic!("Error: {e}");
-        }
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
-
-    let feed_ids: Vec<i64> = feeds.iter().map(|f| f.id).collect();
-
-    DataHandler::handle_event(
-        db_url.clone(),
-        DataEvent::ReloadEntries(feed_ids.clone()),
-        sender.clone(),
-    )
-    .await
-    .expect("Failed to handle ReloadEntries event");
-
-    let mut entries = vec![];
-
-    sleep(Duration::from_secs(2)).await;
-
-    match receiver
-        .try_recv()
-        .expect("Failed to receive response DataEvent")
-    {
-        DataEvent::ReloadedEntries(data) => {
-            assert_eq!(data.len(), 1);
-            assert_eq!(data[0].len(), 10);
-            for group in data {
-                for data in group {
-                    entries.push(data);
-                }
-            }
-        }
-        DataEvent::Error(e) => {
-            panic!("Error: {e}");
+        AppEvent::Error(e) => {
+            panic!("{}", e);
         }
         e => {
             panic!("Unexpected event received, {:?}", e);
@@ -282,7 +163,7 @@ async fn feed_is_deleted() {
         .try_recv()
         .expect("Failed to receive completed response DataEvent")
     {
-        DataEvent::Complete => {
+        AppEvent::Complete => {
             debug!("ReloadEntries completed");
         }
         e => {
@@ -290,8 +171,10 @@ async fn feed_is_deleted() {
         }
     }
 
+    let feed_ids: Vec<i64> = feeds.iter().map(|f| f.id).collect();
+
     // Handle delete event
-    DataHandler::handle_event(db_url.clone(), DataEvent::DeleteFeed(feed_ids[0]), sender)
+    data::handle_event(db_url.clone(), DataEvent::DeleteFeed(feed_ids[0]), sender)
         .await
         .expect("Failed to handle DeleteFeed event");
 
@@ -301,8 +184,8 @@ async fn feed_is_deleted() {
         .try_recv()
         .expect("Failed to receive completed response DataEvent")
     {
-        DataEvent::Deleting(msg) => {
-            println!("{msg}");
+        AppEvent::Deleting(msg) => {
+            debug!("{msg}");
         }
         e => {
             panic!("Unexpected event received, {:?}", e);
@@ -313,13 +196,119 @@ async fn feed_is_deleted() {
         .try_recv()
         .expect("Failed to receive completed response DataEvent")
     {
-        DataEvent::Complete => {
+        AppEvent::Complete => {
             debug!("Delete feed completed");
         }
         e => {
             panic!("Unexpected event received, {:?}", e);
         }
     }
+}
+
+#[tokio::test]
+async fn entry_is_marked_read() {
+
+    // Start logger
+    init_logger();
+    let (sender, mut receiver) = tokio::sync::mpsc::channel(32);
+
+    // Get fresh test data base
+    let db_url = get_test_database_url();
+
+    // Handle an insertion event
+    data::handle_event(
+        db_url.clone(),
+        DataEvent::AddFeed("https://archlinux.org/feeds/news/".to_string()),
+        sender.clone(),
+    )
+    .await
+    .expect("Failed to handle AddFeed event");
+
+    sleep(Duration::from_secs(2)).await;
+
+    match receiver
+        .try_recv()
+        .expect("Failed to receive response DataEvent")
+    {
+        AppEvent::Complete => {}
+        e => {
+            panic!("Unexpected event received, {:?}", e);
+        }
+    }
+
+    sleep(Duration::from_secs(2)).await;
+
+    // Handle a reload event
+    data::handle_event(db_url.clone(), DataEvent::Refresh, sender.clone())
+        .await
+        .expect("Failed to handle ReloadFeeds event");
+
+    sleep(Duration::from_secs(2)).await;
+
+    let mut feeds = vec![];
+    let mut entries = vec![];
+
+    match receiver
+        .try_recv()
+        .expect("Failed to receive ReloadFeeds(_) event")
+    {
+        AppEvent::FeshData(data) => {
+            // Assert data was pulled
+            assert_eq!(data.feeds.len(), 1);
+            assert_eq!(data.entries[0].len(), 10);
+
+            for feed in data.feeds {
+                feeds.push(feed);
+            }
+
+            for entry in data.entries[0].clone() {
+                entries.push(entry);
+            }
+        }
+        AppEvent::Error(e) => {
+            panic!("{}", e);
+        }
+        e => {
+            panic!("Unexpected event received, {:?}", e);
+        }
+    }
+
+    match receiver
+        .try_recv()
+        .expect("Failed to receive completed response DataEvent")
+    {
+        AppEvent::Complete => {
+            debug!("ReloadEntries completed");
+        }
+        e => {
+            panic!("Unexpected event received, {:?}", e);
+        }
+    }
+
+    let entry_id = entries[0].id;
+
+    data::handle_event(db_url.clone(), DataEvent::ReadEntry(entry_id), sender.clone()).await.expect("Failed to send ReadEntry event");
+
+    sleep(Duration::from_secs(2)).await;
+
+    match receiver
+        .try_recv()
+        .expect("Failed to receive completed response DataEvent")
+    {
+        AppEvent::Complete => {
+            debug!("ReloadEntries completed");
+        }
+        e => {
+            panic!("Unexpected event received, {:?}", e);
+        }
+    }
+
+    let conn = &mut connect(db_url.clone()).await.expect("Failed to connect to database");
+
+    let entry = select_entry(conn, &entry_id).await.expect("Failed to get entry from database");
+
+    assert_eq!(entry.read, Some(true));
+
 }
 
 #[test]
