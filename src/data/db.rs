@@ -265,10 +265,16 @@ pub async fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppR
             .await?;
 
             debug!("Populating feed data");
-            insert_authors(conn, feed.authors, Some(ret_feed.id), None).await.expect("Failed to insert feed authors");
+            insert_authors(conn, feed.authors, Some(ret_feed.id), None)
+                .await
+                .expect("Failed to insert feed authors");
             insert_entries(conn, feed.entries, ret_feed.id).await?;
-            insert_links(conn, feed.links, Some(ret_feed.id), None).await.expect("Failed to insert feed links");
-            insert_categories(conn, feed.categories, Some(ret_feed.id), None).await.expect("Failed to insert feed categories");
+            insert_links(conn, feed.links, Some(ret_feed.id), None)
+                .await
+                .expect("Failed to insert feed links");
+            insert_categories(conn, feed.categories, Some(ret_feed.id), None)
+                .await
+                .expect("Failed to insert feed categories");
             return Ok(ret_feed.id);
         }
     }
@@ -548,9 +554,13 @@ async fn insert_entries(
     for entry in entries.iter().rev() {
         debug!("Starting Entry Insertion...");
 
-        let content_id = insert_content(conn, entry.content.clone()).await.expect("Failed to insert entry content");
+        let content_id = insert_content(conn, entry.content.clone())
+            .await
+            .expect("Failed to insert entry content");
 
-        let media_id = insert_media(conn, entry.media.first().cloned()).await.expect("Failed to insert entry media");
+        let media_id = insert_media(conn, entry.media.first().cloned())
+            .await
+            .expect("Failed to insert entry media");
 
         let new_entry = builder
             .feed_id(feed_id)
@@ -598,7 +608,8 @@ async fn insert_entries(
                 new_entry.media_id
             )
             .execute(&mut *conn)
-            .await.expect("Failed to insert entry");
+            .await
+            .expect("Failed to insert entry");
 
             debug!("Returning Entry ID...");
             let ret_entry = query_as!(
@@ -616,9 +627,15 @@ async fn insert_entries(
             .await?;
 
             debug!("Populating Entry data...");
-            insert_authors(conn, entry.authors.clone(), None, Some(ret_entry.id)).await.expect("Failed to insert entry authors");
-            insert_links(conn, entry.links.clone(), None, Some(ret_entry.id)).await.expect("Failed to insert entry links");
-            insert_categories(conn, entry.categories.clone(), None, Some(ret_entry.id)).await.expect("Failed to insert entry categories");
+            insert_authors(conn, entry.authors.clone(), None, Some(ret_entry.id))
+                .await
+                .expect("Failed to insert entry authors");
+            insert_links(conn, entry.links.clone(), None, Some(ret_entry.id))
+                .await
+                .expect("Failed to insert entry links");
+            insert_categories(conn, entry.categories.clone(), None, Some(ret_entry.id))
+                .await
+                .expect("Failed to insert entry categories");
         }
     }
 
@@ -1150,7 +1167,8 @@ pub async fn insert_media(
         new_media.description
     )
     .execute(&mut *conn)
-    .await.expect("Failed to insert media object");
+    .await
+    .expect("Failed to insert media object");
 
     let ret_media = query_as!(
         Media,
@@ -1166,7 +1184,8 @@ pub async fn insert_media(
         new_media.description
     )
     .fetch_one(&mut *conn)
-    .await.expect("Failed selecting inserted media object");
+    .await
+    .expect("Failed selecting inserted media object");
 
     for media_content in media.content.iter() {
         if let Some(link) = &media_content.url {
@@ -1187,7 +1206,8 @@ pub async fn insert_media(
                 new_link.length
             )
             .execute(&mut *conn)
-            .await.expect("Failed inserting media link");
+            .await
+            .expect("Failed inserting media link");
 
             let ret_link = query_as!(
                 Link,
@@ -1210,7 +1230,8 @@ pub async fn insert_media(
                 ret_media.id
             )
             .execute(&mut *conn)
-            .await.expect("Failed inserting media_link in linking table");
+            .await
+            .expect("Failed inserting media_link in linking table");
         }
     }
 

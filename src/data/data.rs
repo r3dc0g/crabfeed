@@ -1,16 +1,17 @@
 use crate::app::AppEvent;
 use crate::error::Error;
-use crate::prelude::{EntryData, FeedData};
+use crate::prelude::{Entry, EntryData, FeedData};
 use crate::AppResult;
 
 use super::db::{
     self, connect, insert_feed, insert_link, mark_entry_read, select_all_entries,
-    select_all_entry_links, select_all_feed_links, select_all_feeds, select_feed,
-    update_feed_title,
+    select_all_entry_links, select_all_feed_links, select_all_feeds, select_content, select_feed,
+    select_media, update_feed_title,
 };
 use feed_rs::parser;
 use log::debug;
 use reqwest;
+use sqlx::SqliteConnection;
 
 #[derive(Debug)]
 pub struct Cache {
@@ -48,13 +49,9 @@ impl DataHandler {
                 loop {
                     if let Ok(event) = sync_receiver.recv() {
                         debug!("Handling {:?}", event);
-                        handle_event(
-                            database_url.clone(),
-                            event,
-                            moved_sender.clone(),
-                        )
-                        .await
-                        .expect("Failed to handle Event");
+                        handle_event(database_url.clone(), event, moved_sender.clone())
+                            .await
+                            .expect("Failed to handle Event");
                     }
                 }
             }
@@ -82,7 +79,6 @@ impl DataHandler {
     pub fn abort(&self) {
         self.handler.abort();
     }
-
 }
 
 // Handle Event
@@ -147,12 +143,8 @@ async fn update_feeds(
                         if let Some(new_title) = &neofeed.title {
                             if let Some(old_title) = &feed.title {
                                 if new_title.content != *old_title {
-                                    update_feed_title(
-                                        conn,
-                                        &feed.id,
-                                        new_title.content.clone(),
-                                    )
-                                    .await?;
+                                    update_feed_title(conn, &feed.id, new_title.content.clone())
+                                        .await?;
                                 }
                             }
                         }
@@ -182,15 +174,23 @@ async fn add_feed(
     sender: tokio::sync::mpsc::Sender<AppEvent>,
 ) -> AppResult<()> {
     debug!("Adding {feed_url}...");
-    let content = reqwest::get(feed_url.as_str()).await?.text().await.expect("Failed to get feed data");
+    let content = reqwest::get(feed_url.as_str())
+        .await?
+        .text()
+        .await
+        .expect("Failed to get feed data");
 
     let feed = parser::parse(content.as_bytes());
 
     if let Ok(feed) = feed {
-        let conn = &mut connect(database_url).await.expect("Failed to connect to Database");
+        let conn = &mut connect(database_url)
+            .await
+            .expect("Failed to connect to Database");
         let feed_id = insert_feed(conn, feed).await?;
 
-        insert_link(conn, feed_url, Some(feed_id), None).await.expect("Failed to insert link");
+        insert_link(conn, feed_url, Some(feed_id), None)
+            .await
+            .expect("Failed to insert link");
     }
 
     sender
@@ -229,10 +229,15 @@ async fn delete_feed(
     Ok(())
 }
 
-async fn refresh(database_url: String, sender: tokio::sync::mpsc::Sender<AppEvent>) -> AppResult<()> {
+async fn refresh(
+    database_url: String,
+    sender: tokio::sync::mpsc::Sender<AppEvent>,
+) -> AppResult<()> {
     debug!("Refreshing data...");
 
-    let conn = &mut connect(database_url).await.expect("Failed to connect to Database");
+    let conn = &mut connect(database_url)
+        .await
+        .expect("Failed to connect to Database");
 
     let feeds = select_all_feeds(conn)
         .await
@@ -263,7 +268,7 @@ async fn refresh(database_url: String, sender: tokio::sync::mpsc::Sender<AppEven
         for entry in entries {
             let mut data = EntryData::from(entry.clone());
 
-            // TODO: handle entry description
+            data.description = process_entry_description(conn, &entry).await?;
 
             let links = select_all_entry_links(conn, &entry.id).await?;
             data.update_links(links);
@@ -273,9 +278,18 @@ async fn refresh(database_url: String, sender: tokio::sync::mpsc::Sender<AppEven
         entry_groups.push(entry_data);
     }
 
-    sender.send(AppEvent::FeshData(Cache {feeds: feed_data, entries: entry_groups})).await.expect("Failed to send AppEvent::FeshData");
+    sender
+        .send(AppEvent::FeshData(Cache {
+            feeds: feed_data,
+            entries: entry_groups,
+        }))
+        .await
+        .expect("Failed to send AppEvent::FeshData");
 
-    sender.send(AppEvent::Complete).await.expect("Failed to send AppEvent::Complete");
+    sender
+        .send(AppEvent::Complete)
+        .await
+        .expect("Failed to send AppEvent::Complete");
 
     Ok(())
 }
@@ -295,4 +309,52 @@ async fn read_entry(
         .expect("Failed to send DataEvent::Complete");
 
     Ok(())
+}
+
+async fn process_entry_description(
+    conn: &mut SqliteConnection,
+    entry: &Entry,
+) -> AppResult<String> {
+    let mut content = String::new();
+    let mut summary = String::new();
+    let mut description = String::new();
+    let mut max_len = 0;
+
+    if let Some(media_id) = entry.media_id {
+        description = select_media(conn, &media_id)
+            .await?
+            .description
+            .unwrap_or(String::new());
+        if description.len() > max_len {
+            max_len = description.len();
+        }
+    }
+
+    if let Some(content_id) = entry.content_id {
+        content = select_content(conn, &content_id)
+            .await?
+            .body
+            .unwrap_or(String::new());
+        if content.len() > max_len {
+            max_len = content.len();
+        }
+    }
+
+    if let Some(s) = &entry.summary {
+        summary = s.to_string();
+        if summary.len() > max_len {
+            max_len = summary.len();
+        }
+    }
+
+    let entry_description = Vec::from([content, summary, description])
+        .iter()
+        .filter(|&f| f.len() >= max_len)
+        .cloned()
+        .collect::<Vec<String>>()
+        .first()
+        .cloned()
+        .unwrap_or("No entry description found.".to_string());
+
+    Ok(entry_description.clone())
 }

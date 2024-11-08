@@ -181,11 +181,13 @@ impl View for Entries {
                     if !self.entry_items[self.index].is_empty() {
                         let entry = Some(
                             self.entry_items[self.index][self.list_state.selected().unwrap_or(0)]
-                                .clone()
+                                .clone(),
                         );
 
-                        self.entry_items[self.index][self.list_state.selected().unwrap()].read = true;
-                        let entry_id = self.entry_items[self.index][self.list_state.selected().unwrap()].id;
+                        self.entry_items[self.index][self.list_state.selected().unwrap()].read =
+                            true;
+                        let entry_id =
+                            self.entry_items[self.index][self.list_state.selected().unwrap()].id;
 
                         return Some(Box::new(move |app| {
                             app.dispatch(DataEvent::ReadEntry(entry_id))?;

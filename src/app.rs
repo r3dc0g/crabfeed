@@ -46,7 +46,7 @@ pub enum AppEvent {
     Error(Box<Error>),
     Updating(String),
     Deleting(String),
-    FeshData(Cache)
+    FeshData(Cache),
 }
 
 pub struct App {

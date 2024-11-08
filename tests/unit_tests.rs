@@ -207,7 +207,6 @@ async fn feed_is_deleted() {
 
 #[tokio::test]
 async fn entry_is_marked_read() {
-
     // Start logger
     init_logger();
     let (sender, mut receiver) = tokio::sync::mpsc::channel(32);
@@ -287,7 +286,13 @@ async fn entry_is_marked_read() {
 
     let entry_id = entries[0].id;
 
-    data::handle_event(db_url.clone(), DataEvent::ReadEntry(entry_id), sender.clone()).await.expect("Failed to send ReadEntry event");
+    data::handle_event(
+        db_url.clone(),
+        DataEvent::ReadEntry(entry_id),
+        sender.clone(),
+    )
+    .await
+    .expect("Failed to send ReadEntry event");
 
     sleep(Duration::from_secs(2)).await;
 
@@ -303,12 +308,15 @@ async fn entry_is_marked_read() {
         }
     }
 
-    let conn = &mut connect(db_url.clone()).await.expect("Failed to connect to database");
+    let conn = &mut connect(db_url.clone())
+        .await
+        .expect("Failed to connect to database");
 
-    let entry = select_entry(conn, &entry_id).await.expect("Failed to get entry from database");
+    let entry = select_entry(conn, &entry_id)
+        .await
+        .expect("Failed to get entry from database");
 
     assert_eq!(entry.read, Some(true));
-
 }
 
 #[test]
