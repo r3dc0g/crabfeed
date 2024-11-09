@@ -1,3 +1,5 @@
+use core::panic;
+
 use crabfeed::app::App;
 use crabfeed::config::get_configuration;
 use crabfeed::AppResult;

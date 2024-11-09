@@ -1,3 +1,5 @@
+use std::process::exit;
+
 use crate::app::AppEvent;
 use crate::error::Error;
 use crate::prelude::{Entry, EntryData, FeedData};
@@ -28,12 +30,13 @@ pub enum DataEvent {
     DeleteFeed(i64),
     Refresh,
     ReadEntry(i64),
+    Abort,
 }
 
 pub struct DataHandler {
     sender: std::sync::mpsc::Sender<DataEvent>,
     receiver: tokio::sync::mpsc::Receiver<AppEvent>,
-    handler: tokio::task::JoinHandle<()>,
+    handler: tokio::task::AbortHandle,
 }
 
 impl DataHandler {
@@ -43,19 +46,25 @@ impl DataHandler {
         let (async_sender, async_receiver) = tokio::sync::mpsc::channel(32);
 
         debug!("Spawning Data Handler thread");
-        let handler = tokio::spawn({
-            async move {
-                let moved_sender = async_sender.clone();
-                loop {
-                    if let Ok(event) = sync_receiver.recv() {
-                        debug!("Handling {:?}", event);
-                        handle_event(database_url.clone(), event, moved_sender.clone())
-                            .await
-                            .expect("Failed to handle Event");
+        let handler = tokio::spawn(async move {
+            let moved_sender = async_sender.clone();
+            loop {
+                if let Ok(event) = sync_receiver.recv() {
+                    debug!("Handling {:?}", event);
+                    match event {
+                        DataEvent::Abort => {
+                            exit(0);
+                        }
+                        _ => {
+                            handle_event(database_url.clone(), event, moved_sender.clone())
+                                .await
+                                .expect("Failed to handle Event");
+                        }
                     }
                 }
             }
-        });
+        })
+        .abort_handle();
 
         Self {
             sender: sync_sender,
@@ -74,10 +83,6 @@ impl DataHandler {
 
     pub fn check(&self) -> bool {
         !self.handler.is_finished()
-    }
-
-    pub fn abort(&self) {
-        self.handler.abort();
     }
 }
 

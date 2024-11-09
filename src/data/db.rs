@@ -110,8 +110,8 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
             link_id INTEGER NOT NULL, \
             media_id INTEGER NOT NULL, \
-            FOREIGN KEY(link_id) REFERENCES link(id), \
-            FOREIGN KEY(media_id) REFERENCES media(id) \
+            FOREIGN KEY(link_id) REFERENCES link(id) ON DELETE CASCADE, \
+            FOREIGN KEY(media_id) REFERENCES media(id) ON DELETE CASCADE \
         )",
     )
     .execute(&mut *conn)
@@ -122,8 +122,8 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
             author_id INTEGER NOT NULL, \
             feed_id INTEGER NOT NULL, \
-            FOREIGN KEY(author_id) REFERENCES author(id), \
-            FOREIGN KEY(feed_id) REFERENCES feed(id) \
+            FOREIGN KEY(author_id) REFERENCES author(id) ON DELETE CASCADE, \
+            FOREIGN KEY(feed_id) REFERENCES feed(id) ON DELETE CASCADE \
         )",
     )
     .execute(&mut *conn)
@@ -134,8 +134,8 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
             author_id INTEGER NOT NULL, \
             entry_id INTEGER NOT NULL, \
-            FOREIGN KEY(author_id) REFERENCES author(id), \
-            FOREIGN KEY(entry_id) REFERENCES entry(id) \
+            FOREIGN KEY(author_id) REFERENCES author(id) ON DELETE CASCADE, \
+            FOREIGN KEY(entry_id) REFERENCES entry(id) ON DELETE CASCADE \
         )",
     )
     .execute(&mut *conn)
@@ -146,8 +146,8 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
             link_id INTEGER NOT NULL, \
             feed_id INTEGER NOT NULL, \
-            FOREIGN KEY(link_id) REFERENCES link(id), \
-            FOREIGN KEY(feed_id) REFERENCES feed(id) \
+            FOREIGN KEY(link_id) REFERENCES link(id) ON DELETE CASCADE, \
+            FOREIGN KEY(feed_id) REFERENCES feed(id) ON DELETE CASCADE \
         )",
     )
     .execute(&mut *conn)
@@ -158,8 +158,8 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
             link_id INTEGER NOT NULL, \
             entry_id INTEGER NOT NULL, \
-            FOREIGN KEY(link_id) REFERENCES link(id), \
-            FOREIGN KEY(entry_id) REFERENCES entry(id) \
+            FOREIGN KEY(link_id) REFERENCES link(id) ON DELETE CASCADE, \
+            FOREIGN KEY(entry_id) REFERENCES entry(id) ON DELETE CASCADE\
         )",
     )
     .execute(&mut *conn)
@@ -170,8 +170,8 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
             category_id INTEGER NOT NULL, \
             feed_id INTEGER NOT NULL, \
-            FOREIGN KEY(category_id) REFERENCES category(id), \
-            FOREIGN KEY(feed_id) REFERENCES feed(id) \
+            FOREIGN KEY(category_id) REFERENCES category(id) ON DELETE CASCADE, \
+            FOREIGN KEY(feed_id) REFERENCES feed(id) ON DELETE CASCADE \
         )",
     )
     .execute(&mut *conn)
@@ -182,8 +182,8 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
             category_id INTEGER NOT NULL, \
             entry_id INTEGER NOT NULL, \
-            FOREIGN KEY(category_id) REFERENCES category(id), \
-            FOREIGN KEY(entry_id) REFERENCES entry(id) \
+            FOREIGN KEY(category_id) REFERENCES category(id) ON DELETE CASCADE, \
+            FOREIGN KEY(entry_id) REFERENCES entry(id) ON DELETE CASCADE \
         )",
     )
     .execute(&mut *conn)
@@ -1263,19 +1263,19 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
     let entries = select_all_entries(conn, &feed_id).await?;
 
     for entry in entries {
-        delete_entry(conn, entry.id).await?;
+        delete_entry(conn, entry.id)
+            .await
+            .expect("Failed deleting entry");
     }
 
     if let Ok(links) = select_all_feed_links(conn, &feed_id).await {
         for link in links {
             query!(
                 r#"
-                DELETE FROM feed_link
-                WHERE feed_link.link_id = $1
-                AND feed_link.feed_id = $2
+                DELETE FROM link
+                WHERE link.id = $1
                 "#,
                 link.id,
-                feed_id
             )
             .execute(&mut *conn)
             .await?;
@@ -1286,12 +1286,10 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
         for author in authors {
             query!(
                 r#"
-                DELETE FROM feed_author
-                WHERE feed_author.author_id = $1
-                AND feed_author.feed_id = $2
+                DELETE FROM author
+                WHERE author.id = $1
                 "#,
                 author.id,
-                feed_id
             )
             .execute(&mut *conn)
             .await?;
@@ -1302,12 +1300,10 @@ pub async fn delete_feed(conn: &mut SqliteConnection, feed_id: i64) -> AppResult
         for category in categories {
             query!(
                 r#"
-                DELETE FROM feed_category
-                WHERE feed_category.category_id = $1
-                AND feed_category.feed_id = $2
+                DELETE FROM category
+                WHERE category.id = $1
                 "#,
                 category.id,
-                feed_id
             )
             .execute(&mut *conn)
             .await?;
@@ -1338,18 +1334,6 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
         for link in links {
             query!(
                 r#"
-                DELETE FROM entry_link
-                WHERE entry_link.link_id = $1
-                AND entry_link.entry_id = $2
-                "#,
-                link.id,
-                entry.id
-            )
-            .execute(&mut *conn)
-            .await?;
-
-            query!(
-                r#"
                 DELETE FROM link
                 WHERE link.id = $1
                 "#,
@@ -1363,12 +1347,10 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
         for author in authors {
             query!(
                 r#"
-                DELETE FROM entry_author
-                WHERE entry_author.author_id = $1
-                AND entry_author.entry_id = $2
+                DELETE FROM author
+                WHERE author.id = $1
                 "#,
                 author.id,
-                entry.id
             )
             .execute(&mut *conn)
             .await?;
@@ -1380,16 +1362,26 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
             for link in media_links {
                 query!(
                     r#"
-                    DELETE FROM media_link
-                    WHERE media_link.link_id = $1
-                    AND media_link.media_id = $2
+                    DELETE FROM link
+                    WHERE link.id = $1
                     "#,
                     link.id,
-                    media_id
                 )
                 .execute(&mut *conn)
                 .await?;
             }
+        }
+
+        if let Ok(media) = select_media(conn, &media_id).await {
+            query!(
+                r#"
+                DELETE FROM media
+                WHERE media.id = $1
+                "#,
+                media.id
+            )
+            .execute(&mut *conn)
+            .await?;
         }
     };
 
@@ -1397,12 +1389,10 @@ pub async fn delete_entry(conn: &mut SqliteConnection, entry_id: i64) -> AppResu
         for category in categories {
             query!(
                 r#"
-                DELETE FROM entry_category
-                WHERE entry_category.category_id = $1
-                AND entry_category.entry_id = $2
+                DELETE FROM category
+                WHERE category.id = $1
                 "#,
                 category.id,
-                entry.id
             )
             .execute(&mut *conn)
             .await?;

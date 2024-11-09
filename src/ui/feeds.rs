@@ -5,6 +5,7 @@ use crate::config::Settings;
 use crate::prelude::FeedData;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
+use crossterm::event::KeyModifiers;
 use ratatui::{buffer::Buffer, layout::Rect, prelude::*, widgets::ListState};
 
 use super::components::*;
@@ -113,6 +114,20 @@ impl View for Feeds {
                         .set_current_route(Route::new(RouteId::Home, ActiveBlock::Entries));
                     Ok(())
                 }))
+            }
+            _ if key.code == KeyCode::Char('d') && key.modifiers == KeyModifiers::CONTROL => {
+                if let Some(index) = self.list_state.selected() {
+                    let feed_id = self.feed_items[index].id;
+                    self.feed_items.remove(index);
+
+                    return Some(Box::new(move |app| {
+                        app.ui.remove_entries(index);
+                        app.dispatch(crate::data::data::DataEvent::DeleteFeed(feed_id.clone()))?;
+                        Ok(())
+                    }));
+                }
+
+                return None;
             }
             _ => None,
         }

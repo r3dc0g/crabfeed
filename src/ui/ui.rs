@@ -54,6 +54,10 @@ impl Ui {
     }
 
     pub fn back(&mut self) {
+        if self.popup.is_some() {
+            self.unset_popup();
+            return;
+        }
         self.navigation_stack.pop();
     }
 
@@ -67,6 +71,10 @@ impl Ui {
 
     pub fn prev_entries(&mut self) {
         self.entries.prev_index();
+    }
+
+    pub fn remove_entries(&mut self, index: usize) {
+        self.entries.remove(index);
     }
 
     pub fn update_feeds(&mut self, feeds: Vec<FeedData>) {

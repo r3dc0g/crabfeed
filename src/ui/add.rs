@@ -101,6 +101,14 @@ impl View for Add {
                 return None;
             }
             KeyCode::Enter => {
+                if self.input.is_empty() {
+                    self.reset();
+                    return Some(Box::new(move |app| {
+                        app.ui.back();
+                        Ok(())
+                    }));
+                }
+
                 let url = self.input.iter().collect::<String>().replace("\n", "");
                 self.reset();
                 Some(Box::new(move |app| {

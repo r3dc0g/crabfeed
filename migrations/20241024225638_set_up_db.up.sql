@@ -67,54 +67,54 @@ CREATE TABLE IF NOT EXISTS media_link (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     link_id INTEGER NOT NULL,
     media_id INTEGER NOT NULL,
-    FOREIGN KEY(link_id) REFERENCES link(id),
-    FOREIGN KEY(media_id) REFERENCES media(id)
+    FOREIGN KEY(link_id) REFERENCES link(id) ON DELETE CASCADE,
+    FOREIGN KEY(media_id) REFERENCES media(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS feed_author (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     author_id INTEGER NOT NULL,
     feed_id INTEGER NOT NULL,
-    FOREIGN KEY(author_id) REFERENCES author(id),
-    FOREIGN KEY(feed_id) REFERENCES feed(id)
+    FOREIGN KEY(author_id) REFERENCES author(id) ON DELETE CASCADE,
+    FOREIGN KEY(feed_id) REFERENCES feed(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS entry_author (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     author_id INTEGER NOT NULL,
     entry_id INTEGER NOT NULL,
-    FOREIGN KEY(author_id) REFERENCES author(id),
-    FOREIGN KEY(entry_id) REFERENCES entry(id)
+    FOREIGN KEY(author_id) REFERENCES author(id) ON DELETE CASCADE,
+    FOREIGN KEY(entry_id) REFERENCES entry(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS feed_link (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     link_id INTEGER NOT NULL,
     feed_id INTEGER NOT NULL,
-    FOREIGN KEY(link_id) REFERENCES link(id),
-    FOREIGN KEY(feed_id) REFERENCES feed(id)
+    FOREIGN KEY(link_id) REFERENCES link(id) ON DELETE CASCADE,
+    FOREIGN KEY(feed_id) REFERENCES feed(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS entry_link (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     link_id INTEGER NOT NULL,
     entry_id INTEGER NOT NULL,
-    FOREIGN KEY(link_id) REFERENCES link(id),
-    FOREIGN KEY(entry_id) REFERENCES entry(id)
+    FOREIGN KEY(link_id) REFERENCES link(id) ON DELETE CASCADE,
+    FOREIGN KEY(entry_id) REFERENCES entry(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS feed_category (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     category_id INTEGER NOT NULL,
     feed_id INTEGER NOT NULL,
-    FOREIGN KEY(category_id) REFERENCES category(id),
-    FOREIGN KEY(feed_id) REFERENCES feed(id)
+    FOREIGN KEY(category_id) REFERENCES category(id) ON DELETE CASCADE,
+    FOREIGN KEY(feed_id) REFERENCES feed(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS entry_category (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     category_id INTEGER NOT NULL,
     entry_id INTEGER NOT NULL,
-    FOREIGN KEY(category_id) REFERENCES category(id),
-    FOREIGN KEY(entry_id) REFERENCES entry(id)
+    FOREIGN KEY(category_id) REFERENCES category(id) ON DELETE CASCADE,
+    FOREIGN KEY(entry_id) REFERENCES entry(id) ON DELETE CASCADE
 );

@@ -292,7 +292,7 @@ impl View for Entry {
                 }
             }
             KeyCode::Char('h') | KeyCode::Char('q') | KeyCode::Esc => {
-                let Some(entry) = &self.entry else {
+                if self.entry.is_none() {
                     return Some(Box::new(move |app| {
                         app.ui.back();
                         Ok(())

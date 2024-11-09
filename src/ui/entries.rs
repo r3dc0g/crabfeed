@@ -66,6 +66,10 @@ impl Entries {
         }
         self.entry_items = item_groups;
     }
+
+    pub fn remove(&mut self, index: usize) {
+        self.entry_items.remove(index);
+    }
 }
 
 impl View for Entries {
