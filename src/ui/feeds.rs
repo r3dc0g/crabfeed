@@ -120,6 +120,12 @@ impl View for Feeds {
                     let feed_id = self.feed_items[index].id;
                     self.feed_items.remove(index);
 
+                    if index > 0 {
+                        self.list_state.select(Some(index - 1));
+                    } else {
+                        self.list_state.select(None);
+                    }
+
                     return Some(Box::new(move |app| {
                         app.ui.remove_entries(index);
                         app.dispatch(crate::data::data::DataEvent::DeleteFeed(feed_id.clone()))?;

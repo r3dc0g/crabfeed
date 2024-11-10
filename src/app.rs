@@ -12,8 +12,6 @@ use ratatui::layout::Rect;
 use ratatui::prelude::CrosstermBackend;
 use ratatui::Frame;
 use std::io;
-use std::thread::sleep;
-use std::time::Duration;
 
 #[derive(Clone, Default, PartialEq, Debug)]
 pub enum RouteId {

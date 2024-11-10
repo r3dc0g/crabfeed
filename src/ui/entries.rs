@@ -68,6 +68,9 @@ impl Entries {
     }
 
     pub fn remove(&mut self, index: usize) {
+        if self.index > 0 {
+            self.index -= 1;
+        }
         self.entry_items.remove(index);
     }
 }
