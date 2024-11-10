@@ -11,15 +11,13 @@ pub enum TerminalEvent {
 }
 
 pub struct EventHandler {
-    sender: mpsc::Sender<TerminalEvent>,
     receiver: mpsc::Receiver<TerminalEvent>,
-    event_handler: thread::JoinHandle<()>,
 }
 
 impl EventHandler {
     pub fn new() -> Self {
         let (sender, receiver) = mpsc::channel();
-        let event_handler = {
+        {
             let sender = sender.clone();
             let mut last_tick = Tick::now();
             thread::spawn(move || loop {
@@ -49,11 +47,7 @@ impl EventHandler {
             })
         };
 
-        Self {
-            sender,
-            receiver,
-            event_handler,
-        }
+        Self { receiver }
     }
 
     pub fn next(&self) -> AppResult<TerminalEvent> {

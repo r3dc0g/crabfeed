@@ -1,4 +1,6 @@
-use crate::network::NetworkEvent;
+use std::sync::mpsc;
+
+use crate::app::AppEvent;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -9,10 +11,16 @@ pub enum Error {
     Static(&'static str),
 
     #[error(transparent)]
-    Query(#[from] diesel::result::Error),
+    SqlxError(#[from] sqlx::Error),
 
     #[error(transparent)]
-    Connection(#[from] diesel::result::ConnectionError),
+    SendError(#[from] mpsc::SendError<AppEvent>),
+
+    #[error(transparent)]
+    NextRecvError(#[from] tokio::sync::mpsc::error::TryRecvError),
+
+    #[error(transparent)]
+    MigrationError(#[from] sqlx::migrate::MigrateError),
 
     #[error(transparent)]
     EnvVar(#[from] std::env::VarError),
@@ -31,9 +39,6 @@ pub enum Error {
 
     #[error(transparent)]
     HTMLParsing(#[from] html_parser::Error),
-
-    #[error(transparent)]
-    SendError(#[from] std::sync::mpsc::SendError<NetworkEvent>),
 
     #[error(transparent)]
     RecvTimeout(#[from] std::sync::mpsc::RecvTimeoutError),

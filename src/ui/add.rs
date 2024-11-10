@@ -1,4 +1,4 @@
-use crate::{config::Settings, network::NetworkEvent};
+use crate::{config::Settings, data::data::DataEvent};
 
 use super::{
     components::{BlockText, Popup},
@@ -101,13 +101,19 @@ impl View for Add {
                 return None;
             }
             KeyCode::Enter => {
+                if self.input.is_empty() {
+                    self.reset();
+                    return Some(Box::new(move |app| {
+                        app.ui.back();
+                        Ok(())
+                    }));
+                }
+
                 let url = self.input.iter().collect::<String>().replace("\n", "");
                 self.reset();
                 Some(Box::new(move |app| {
-                    app.is_loading = true;
-                    app.ui.is_loading = true;
-                    app.network_handler
-                        .dispatch(NetworkEvent::AddFeed(url.clone()))?;
+                    app.dispatch(DataEvent::AddFeed(url.clone()))?;
+                    app.dispatch(DataEvent::Refresh)?;
                     app.ui.back();
                     Ok(())
                 }))

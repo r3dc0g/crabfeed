@@ -1,5 +1,7 @@
+use crate::config::Settings;
+use crate::data::data::{Cache, DataEvent, DataHandler};
+use crate::error::Error;
 use crate::event::{EventHandler, TerminalEvent};
-use crate::network::{NetworkEvent, NetworkHandler};
 use crate::time::Tick;
 use crate::tui::Tui;
 use crate::ui::ui::Ui;
@@ -38,20 +40,31 @@ impl Route {
     }
 }
 
+#[derive(Debug)]
+pub enum AppEvent {
+    Complete,
+    Error(Box<Error>),
+    Updating(String),
+    Deleting(String),
+    FeshData(Cache),
+}
+
 pub struct App {
     pub is_running: bool,
     pub is_loading: bool,
     pub ui: Ui,
-    pub network_handler: NetworkHandler,
+    pub data_handler: DataHandler,
+    pub running_data_calls: u16,
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(config: Settings) -> Self {
         App {
             is_running: true,
             is_loading: false,
-            ui: Ui::new(),
-            network_handler: NetworkHandler::new(),
+            ui: Ui::new(config.clone()),
+            data_handler: DataHandler::new(config.database_url.clone()),
+            running_data_calls: 0,
         }
     }
 
@@ -59,6 +72,8 @@ impl App {
         let backend = CrosstermBackend::new(io::stdout());
         let event_handler = EventHandler::new();
         let mut tui = Tui::new(backend, event_handler)?;
+
+        self.dispatch(DataEvent::Refresh)?;
 
         while self.is_running {
             match tui.event_handler.next()? {
@@ -83,6 +98,16 @@ impl App {
             }
         }
         tui.exit()?;
+        self.dispatch(DataEvent::Abort)?;
+        Ok(())
+    }
+
+    pub fn dispatch(&mut self, event: DataEvent) -> AppResult<()> {
+        self.running_data_calls += 1;
+        self.is_loading = true;
+        self.ui.is_loading = true;
+
+        self.data_handler.dispatch(event)?;
         Ok(())
     }
 
@@ -106,22 +131,33 @@ impl App {
         }
     }
 
-    pub fn handle_mouse_event(&mut self, event: MouseEvent) {}
+    pub fn handle_mouse_event(&mut self, _event: MouseEvent) {}
 
     pub fn handle_tick_event(&mut self, _tick: Tick) {
         assert_eq!(self.ui.is_loading, self.is_loading);
         if self.is_loading {
-            if let Ok(event) = self.network_handler.next() {
+            if let Ok(event) = self.data_handler.next() {
                 match event {
-                    NetworkEvent::Complete => {
-                        self.ui.update_feeds();
-                        self.is_loading = false;
-                        self.ui.is_loading = false;
+                    AppEvent::Complete => {
+                        self.running_data_calls -= 1;
+                        if self.running_data_calls == 0 {
+                            self.is_loading = false;
+                            self.ui.is_loading = false;
+                        }
                     }
-                    NetworkEvent::Updating(message) => {
+                    AppEvent::Updating(message) => {
                         self.ui.loading_msg = message;
                     }
-                    _ => {}
+                    AppEvent::Deleting(message) => {
+                        self.ui.loading_msg = message;
+                    }
+                    AppEvent::FeshData(data) => {
+                        self.ui.update_feeds(data.feeds);
+                        self.ui.update_entries(data.entries);
+                    }
+                    AppEvent::Error(_) => {
+                        self.is_running = false;
+                    }
                 }
             }
         }

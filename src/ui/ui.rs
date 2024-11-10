@@ -5,9 +5,9 @@ use super::feeds::Feeds;
 use super::View;
 use super::{components::*, UiCallback};
 use crate::app::{ActiveBlock, Route, RouteId};
-use crate::config::{get_configuration, Settings};
-use crate::network::NetworkEvent;
-use crate::prelude::Entry;
+use crate::config::Settings;
+use crate::data::data::DataEvent;
+use crate::prelude::{EntryData, FeedData};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -26,12 +26,11 @@ pub struct Ui {
 }
 
 impl Ui {
-    pub fn new() -> Self {
-        let mut feeds = Feeds::new();
+    pub fn new(config: Settings) -> Self {
+        let mut feeds = Feeds::new(None);
         feeds.select(true);
-        let entries = Entries::new(feeds.get_selected_feed().as_ref());
+        let entries = Entries::new(None);
         let entry = EntryView::new(None);
-        let config = get_configuration().unwrap_or_default();
 
         Self {
             navigation_stack: vec![Route::default()],
@@ -55,25 +54,37 @@ impl Ui {
     }
 
     pub fn back(&mut self) {
+        if self.popup.is_some() {
+            self.unset_popup();
+            return;
+        }
         self.navigation_stack.pop();
     }
 
-    pub fn update_entries(&mut self) {
-        let current_feed = self.feeds.get_selected_feed();
-        match current_feed {
-            Some(feed) => {
-                self.entries.update_entries(&feed);
-            }
-            None => {}
+    pub fn update_entries(&mut self, entries: Vec<Vec<EntryData>>) {
+        self.entries.update_entries(entries);
+    }
+
+    pub fn next_entries(&mut self) {
+        self.entries.next_index();
+    }
+
+    pub fn prev_entries(&mut self) {
+        self.entries.prev_index();
+    }
+
+    pub fn remove_entries(&mut self, index: usize) {
+        self.entries.remove(index);
+    }
+
+    pub fn update_feeds(&mut self, feeds: Vec<FeedData>) {
+        self.feeds.update_feeds(feeds);
+    }
+
+    pub fn set_entry(&mut self, entry: Option<EntryData>) {
+        if let Some(data) = entry {
+            self.entry.set_entry(data);
         }
-    }
-
-    pub fn update_feeds(&mut self) {
-        self.feeds.update_feeds();
-    }
-
-    pub fn set_entry(&mut self, entry: Option<Entry>) {
-        self.entry.set_entry(entry);
     }
 
     pub fn unset_popup(&mut self) {
@@ -130,7 +141,7 @@ impl Ui {
             }
             _ if key.code == KeyCode::Char('u') && key.modifiers == KeyModifiers::CONTROL => {
                 return Some(Box::new(move |app| {
-                    app.network_handler.dispatch(NetworkEvent::UpdateFeeds)?;
+                    app.data_handler.dispatch(DataEvent::UpdateFeeds)?;
                     app.is_loading = true;
                     app.ui.is_loading = true;
                     Ok(())
