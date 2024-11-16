@@ -193,16 +193,13 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
 }
 
 pub async fn connect(database_url: String) -> AppResult<SqliteConnection> {
-    if cfg!(unix) {
-        let mut conn = SqliteConnectOptions::from_str(&database_url)?
-            .create_if_missing(true)
-            .connect()
-            .await?;
-        setup_database(&mut conn).await?;
-        return Ok(conn);
-    }
+    let mut conn = SqliteConnectOptions::from_str(&database_url)?
+        .create_if_missing(true)
+        .connect()
+        .await?;
+    setup_database(&mut conn).await?;
 
-    Err(Error::Static("Unsupported OS"))
+    Ok(conn)
 }
 
 pub async fn insert_feed(conn: &mut SqliteConnection, feed: model::Feed) -> AppResult<i64> {
