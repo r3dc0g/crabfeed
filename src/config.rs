@@ -1,5 +1,7 @@
 use std::fs::create_dir_all;
 
+use directories::BaseDirs;
+
 use crate::AppResult;
 
 #[derive(serde::Deserialize, Debug, PartialEq, Clone)]
@@ -10,9 +12,13 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        let user = std::env::var("USER").unwrap();
-        create_dir_all(format!("/home/{user}/.local/share/crabfeed"))
-            .expect("Failed to create directory");
+        let dir = BaseDirs::new().expect("Failed to get base directories");
+        let dir_str = dir
+            .data_local_dir()
+            .to_str()
+            .expect("Failed to convert path to string");
+
+        create_dir_all(format!("{}/crabfeed", dir_str)).expect("Failed to create directory");
 
         Settings {
             colors: ColorSettings {
@@ -20,7 +26,7 @@ impl Default for Settings {
                 secondary: "#ffff00".to_string(),
                 highlight: "#999999".to_string(),
             },
-            database_url: format!("sqlite:///home/{user}/.local/share/crabfeed/crabfeed.db"),
+            database_url: format!("sqlite:/{}/crabfeed/crabfeed.db", dir_str),
         }
     }
 }
@@ -41,13 +47,19 @@ impl TryFrom<config::Config> for Settings {
 }
 
 pub fn get_configuration() -> AppResult<Settings> {
-    let user = std::env::var("USER")?;
+    let dir = BaseDirs::new().expect("Failed to get base directories");
+    let dir_str = dir
+        .config_dir()
+        .to_str()
+        .expect("Failed to convert path to string");
+
+    create_dir_all(format!("{}/crabfeed", dir_str)).expect("Failed to create directory");
 
     let settings = config::Config::builder()
         .add_source(config::File::with_name(
-            format!("/home/{user}/.config/crabfeed/config.yaml").as_str(),
+            format!("{}/crabfeed/config.yaml", dir_str).as_str(),
         ))
         .build()?;
 
-    Ok(settings.try_into()?)
+    return Ok(settings.try_into()?);
 }
