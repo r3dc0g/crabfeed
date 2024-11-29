@@ -1036,12 +1036,8 @@ async fn insert_content(
             SELECT *
             FROM content
             WHERE content.body = ?
-            AND content.content_type = ?
-            AND content.src = ?
             "#,
             new_content.body,
-            new_content.content_type,
-            new_content.src
         )
         .fetch_one(&mut *conn)
         .await?;
@@ -1119,12 +1115,8 @@ async fn insert_content(
         SELECT *
         FROM content
         WHERE content.body = $1
-        AND content.content_type = $2
-        AND content.src = $3
         "#,
         new_content.body,
-        new_content.content_type,
-        new_content.src
     )
     .fetch_one(&mut *conn)
     .await?;
