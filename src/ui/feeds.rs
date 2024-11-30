@@ -42,6 +42,30 @@ impl Feeds {
     pub fn update_feeds(&mut self, feeds: Vec<FeedData>) {
         self.feed_items = feeds;
     }
+
+    fn scroll_down(&mut self) {
+        if let Some(index) = self.list_state.selected() {
+            if index < self.feed_items.len() - 1 {
+                self.list_state.select_next();
+            } else {
+                self.list_state.select_first();
+            }
+        } else {
+            self.list_state.select_first();
+        }
+    }
+
+    fn scroll_up(&mut self) {
+        if let Some(index) = self.list_state.selected() {
+            if index > 0 {
+                self.list_state.select(Some(index - 1));
+            } else {
+                self.list_state.select(Some(self.feed_items.len() - 1));
+            }
+        } else {
+            self.list_state.select(Some(self.feed_items.len() - 1));
+        }
+    }
 }
 
 impl View for Feeds {
@@ -73,16 +97,7 @@ impl View for Feeds {
                     return None;
                 }
 
-                if let Some(index) = self.list_state.selected() {
-                    if index < self.feed_items.len() - 1 {
-                        self.list_state.select_next();
-                    } else {
-                        self.list_state.select_first();
-                    }
-                } else {
-                    self.list_state.select_first();
-                    return None;
-                }
+                self.scroll_down();
 
                 return Some(Box::new(move |app| {
                     app.ui.next_entries();
@@ -93,15 +108,8 @@ impl View for Feeds {
                 if self.feed_items.is_empty() {
                     return None;
                 }
-                if let Some(index) = self.list_state.selected() {
-                    if index > 0 {
-                        self.list_state.select(Some(index - 1));
-                    } else {
-                        self.list_state.select(Some(self.feed_items.len() - 1));
-                    }
-                } else {
-                    self.list_state.select(Some(self.feed_items.len() - 1));
-                }
+
+                self.scroll_up();
 
                 return Some(Box::new(move |app| {
                     app.ui.prev_entries();
@@ -109,11 +117,16 @@ impl View for Feeds {
                 }));
             }
             KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => {
+                // Don't select a phantom feed and move to entries
+                if key.code == KeyCode::Enter && self.feed_items.is_empty() {
+                    return None;
+                }
+
                 return Some(Box::new(move |app| {
                     app.ui
                         .set_current_route(Route::new(RouteId::Home, ActiveBlock::Entries));
                     Ok(())
-                }))
+                }));
             }
             _ if key.code == KeyCode::Char('d') && key.modifiers == KeyModifiers::CONTROL => {
                 if let Some(index) = self.list_state.selected() {

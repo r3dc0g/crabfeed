@@ -1,6 +1,11 @@
 use core::panic;
-use std::{env::current_dir, fs::create_dir_all, time::Duration};
+use std::{
+    env::current_dir,
+    fs::create_dir_all,
+    time::{self, Duration},
+};
 
+use chrono::Utc;
 use crabfeed::{
     app::AppEvent,
     config::{get_configuration, Settings},
@@ -14,7 +19,7 @@ use env_logger::Target;
 use log::{debug, info};
 use ratatui::style::Color;
 use tokio::time::sleep;
-use uuid::Uuid;
+use uuid::{timestamp, Uuid};
 
 #[tokio::test]
 async fn data_is_refreshed() {
@@ -74,25 +79,32 @@ async fn feed_is_added() {
     // Get fresh test data base
     let db_url = get_test_database_url();
 
-    // Handle an insertion event
-    data::handle_event(
-        db_url,
-        DataEvent::AddFeed("https://archlinux.org/feeds/news/".to_string()),
-        sender,
-    )
-    .await
-    .expect("Failed to handle AddFeed event");
+    // List of different feeds to test
+    let feed_list = [
+        "https://archlinux.org/feeds/news/".to_string(),
+        "https://100r.co/links/rss.xml".to_string(),
+        "https://guerrillahistory.libsyn.com/rss".to_string(),
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCUBsjvdHcwZd3ztdY1Zadcw".to_string(),
+        "https://manga4life.com/rss/Tengoku-Daimakyou.xml".to_string(),
+    ];
 
-    sleep(Duration::from_secs(2)).await;
+    for feed in feed_list {
+        // Handle an insertion event
+        data::handle_event(db_url.clone(), DataEvent::AddFeed(feed), sender.clone())
+            .await
+            .expect("Failed to handle AddFeed event");
 
-    let event = receiver
-        .try_recv()
-        .expect("Failed to receive response DataEvent");
+        sleep(Duration::from_secs(2)).await;
 
-    match event {
-        AppEvent::Complete => {}
-        e => {
-            panic!("Unexpected event received, {:?}", e);
+        let event = receiver
+            .try_recv()
+            .expect("Failed to receive response DataEvent");
+
+        match event {
+            AppEvent::Complete => {}
+            e => {
+                panic!("Unexpected event received, {:?}", e);
+            }
         }
     }
 }
@@ -106,101 +118,111 @@ async fn feed_is_deleted() {
     // Get fresh test data base
     let db_url = get_test_database_url();
 
-    // Handle an insertion event
-    data::handle_event(
-        db_url.clone(),
-        DataEvent::AddFeed("https://archlinux.org/feeds/news/".to_string()),
-        sender.clone(),
-    )
-    .await
-    .expect("Failed to handle AddFeed event");
+    // List of different feeds to test
+    let feed_list = [
+        "https://archlinux.org/feeds/news/".to_string(),
+        "https://100r.co/links/rss.xml".to_string(),
+        "https://guerrillahistory.libsyn.com/rss".to_string(),
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCUBsjvdHcwZd3ztdY1Zadcw".to_string(),
+        "https://manga4life.com/rss/Tengoku-Daimakyou.xml".to_string(),
+    ];
 
-    sleep(Duration::from_secs(2)).await;
+    for feed in feed_list {
+        // Handle an insertion event
+        data::handle_event(db_url.clone(), DataEvent::AddFeed(feed), sender.clone())
+            .await
+            .expect("Failed to handle AddFeed event");
 
-    match receiver
-        .try_recv()
-        .expect("Failed to receive response DataEvent")
-    {
-        AppEvent::Complete => {}
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
+        sleep(Duration::from_secs(2)).await;
 
-    sleep(Duration::from_secs(2)).await;
-
-    // Handle a reload event
-    data::handle_event(db_url.clone(), DataEvent::Refresh, sender.clone())
-        .await
-        .expect("Failed to handle ReloadFeeds event");
-
-    sleep(Duration::from_secs(2)).await;
-
-    let mut feeds = vec![];
-
-    match receiver
-        .try_recv()
-        .expect("Failed to receive ReloadFeeds(_) event")
-    {
-        AppEvent::FeshData(data) => {
-            // Assert data was pulled
-            assert_eq!(data.feeds.len(), 1);
-            assert_eq!(data.entries[0].len(), 10);
-
-            for feed in data.feeds {
-                feeds.push(feed);
+        match receiver
+            .try_recv()
+            .expect("Failed to receive response DataEvent")
+        {
+            AppEvent::Complete => {}
+            e => {
+                panic!("Unexpected event received, {:?}", e);
             }
         }
-        AppEvent::Error(e) => {
-            panic!("{}", e);
-        }
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
 
-    match receiver
-        .try_recv()
-        .expect("Failed to receive completed response DataEvent")
-    {
-        AppEvent::Complete => {
-            debug!("ReloadEntries completed");
-        }
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
+        sleep(Duration::from_secs(2)).await;
 
-    let feed_ids: Vec<i64> = feeds.iter().map(|f| f.id).collect();
+        // Handle a reload event
+        data::handle_event(db_url.clone(), DataEvent::Refresh, sender.clone())
+            .await
+            .expect("Failed to handle ReloadFeeds event");
 
-    // Handle delete event
-    data::handle_event(db_url.clone(), DataEvent::DeleteFeed(feed_ids[0]), sender)
+        sleep(Duration::from_secs(2)).await;
+
+        let mut feeds = vec![];
+
+        match receiver
+            .try_recv()
+            .expect("Failed to receive ReloadFeeds(_) event")
+        {
+            AppEvent::FeshData(data) => {
+                // Assert data was pulled
+                assert_eq!(data.feeds.len(), 1);
+
+                for feed in data.feeds {
+                    feeds.push(feed);
+                }
+            }
+            AppEvent::Error(e) => {
+                panic!("{}", e);
+            }
+            e => {
+                panic!("Unexpected event received, {:?}", e);
+            }
+        }
+
+        match receiver
+            .try_recv()
+            .expect("Failed to receive completed response DataEvent")
+        {
+            AppEvent::Complete => {
+                debug!("ReloadEntries completed");
+            }
+            e => {
+                panic!("Unexpected event received, {:?}", e);
+            }
+        }
+
+        let feed_ids: Vec<i64> = feeds.iter().map(|f| f.id).collect();
+
+        // Handle delete event
+        data::handle_event(
+            db_url.clone(),
+            DataEvent::DeleteFeed(feed_ids[0]),
+            sender.clone(),
+        )
         .await
         .expect("Failed to handle DeleteFeed event");
 
-    sleep(Duration::from_secs(2)).await;
+        sleep(Duration::from_secs(2)).await;
 
-    match receiver
-        .try_recv()
-        .expect("Failed to receive completed response DataEvent")
-    {
-        AppEvent::Deleting(msg) => {
-            debug!("{msg}");
+        match receiver
+            .try_recv()
+            .expect("Failed to receive completed response DataEvent")
+        {
+            AppEvent::Deleting(msg) => {
+                debug!("{msg}");
+            }
+            e => {
+                panic!("Unexpected event received, {:?}", e);
+            }
         }
-        e => {
-            panic!("Unexpected event received, {:?}", e);
-        }
-    }
 
-    match receiver
-        .try_recv()
-        .expect("Failed to receive completed response DataEvent")
-    {
-        AppEvent::Complete => {
-            debug!("Delete feed completed");
-        }
-        e => {
-            panic!("Unexpected event received, {:?}", e);
+        match receiver
+            .try_recv()
+            .expect("Failed to receive completed response DataEvent")
+        {
+            AppEvent::Complete => {
+                debug!("Delete feed completed");
+            }
+            e => {
+                panic!("Unexpected event received, {:?}", e);
+            }
         }
     }
 }
@@ -346,7 +368,7 @@ fn get_test_database_url() -> String {
         .display()
         .to_string();
     create_dir_all(format!("{curr_dir}/tests/test_db")).expect("Failed to create test_db folder");
-    let db_name = Uuid::new_v4().to_string();
+    let db_name = Utc::now().to_string();
 
     let url = format!("sqlite:///{curr_dir}/tests/test_db/{db_name}.db");
     info!("Database url: {url}");

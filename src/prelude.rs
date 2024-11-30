@@ -40,12 +40,12 @@ impl FeedData {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct NewFeed<'a> {
-    pub title: Option<&'a str>,
-    pub updated: Option<&'a NaiveDateTime>,
-    pub description: Option<&'a str>,
-    pub language: Option<&'a str>,
-    pub published: Option<&'a NaiveDateTime>,
+pub struct NewFeed {
+    pub title: Option<String>,
+    pub updated: Option<NaiveDateTime>,
+    pub description: Option<String>,
+    pub language: Option<String>,
+    pub published: Option<NaiveDateTime>,
 }
 
 #[derive(Default)]
@@ -110,11 +110,11 @@ impl FeedBuilder {
 
     pub fn build(&self) -> AppResult<NewFeed> {
         Ok(NewFeed {
-            title: self.title.as_deref(),
-            updated: self.updated.as_ref(),
-            description: self.description.as_deref(),
-            language: self.language.as_deref(),
-            published: self.published.as_ref(),
+            title: self.title.clone(),
+            updated: self.updated,
+            description: self.description.clone(),
+            language: self.language.clone(),
+            published: self.published,
         })
     }
 }
@@ -172,14 +172,14 @@ impl EntryData {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct NewEntry<'a> {
-    pub feed_id: &'a i64,
-    pub title: Option<&'a str>,
-    pub updated: Option<&'a NaiveDateTime>,
-    pub content_id: Option<&'a i64>,
-    pub media_id: Option<&'a i64>,
-    pub summary: Option<&'a str>,
-    pub source: Option<&'a str>,
+pub struct NewEntry {
+    pub feed_id: i64,
+    pub title: Option<String>,
+    pub updated: Option<NaiveDateTime>,
+    pub content_id: Option<i64>,
+    pub media_id: Option<i64>,
+    pub summary: Option<String>,
+    pub source: Option<String>,
 }
 
 #[derive(Default)]
@@ -265,13 +265,13 @@ impl EntryBuilder {
 
     pub fn build(&self) -> AppResult<NewEntry> {
         Ok(NewEntry {
-            feed_id: &self.feed_id,
-            title: self.title.as_deref(),
-            updated: self.updated.as_ref(),
-            content_id: self.content_id.as_ref(),
-            media_id: self.media_id.as_ref(),
-            summary: self.summary.as_deref(),
-            source: self.source.as_deref(),
+            feed_id: self.feed_id,
+            title: self.title.clone(),
+            updated: self.updated,
+            content_id: self.content_id,
+            media_id: self.media_id,
+            summary: self.summary.clone(),
+            source: self.source.clone(),
         })
     }
 }
@@ -285,10 +285,10 @@ pub struct Media {
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct NewMedia<'a> {
-    pub title: Option<&'a str>,
-    pub thumbnail: Option<&'a str>,
-    pub description: Option<&'a str>,
+pub struct NewMedia {
+    pub title: Option<String>,
+    pub thumbnail: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Default)]
@@ -329,9 +329,9 @@ impl MediaBuilder {
 
     pub fn build(&self) -> AppResult<NewMedia> {
         Ok(NewMedia {
-            title: self.title.as_deref(),
-            thumbnail: self.thumbnail.as_deref(),
-            description: self.description.as_deref(),
+            title: self.title.clone(),
+            thumbnail: self.thumbnail.clone(),
+            description: self.description.clone(),
         })
     }
 }
@@ -345,10 +345,10 @@ pub struct Author {
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct NewAuthor<'a> {
-    pub name: &'a str,
-    pub uri: Option<&'a str>,
-    pub email: Option<&'a str>,
+pub struct NewAuthor {
+    pub name: String,
+    pub uri: Option<String>,
+    pub email: Option<String>,
 }
 
 #[derive(Default)]
@@ -390,9 +390,9 @@ impl AuthorBuilder {
 
     pub fn build(&self) -> AppResult<NewAuthor> {
         Ok(NewAuthor {
-            name: self.name.as_str(),
-            uri: self.uri.as_deref(),
-            email: self.email.as_deref(),
+            name: self.name.clone(),
+            uri: self.uri.clone(),
+            email: self.email.clone(),
         })
     }
 }
@@ -409,13 +409,13 @@ pub struct Link {
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct NewLink<'a> {
-    pub href: &'a str,
-    pub rel: Option<&'a str>,
-    pub media_type: Option<&'a str>,
-    pub href_lang: Option<&'a str>,
-    pub title: Option<&'a str>,
-    pub length: Option<&'a i64>,
+pub struct NewLink {
+    pub href: String,
+    pub rel: Option<String>,
+    pub media_type: Option<String>,
+    pub href_lang: Option<String>,
+    pub title: Option<String>,
+    pub length: Option<i64>,
 }
 
 #[derive(Default, Debug)]
@@ -490,12 +490,12 @@ impl LinkBuilder {
 
     pub fn build(&self) -> AppResult<NewLink> {
         Ok(NewLink {
-            href: self.href.as_str(),
-            rel: self.rel.as_deref(),
-            media_type: self.media_type.as_deref(),
-            href_lang: self.href_lang.as_deref(),
-            title: self.title.as_deref(),
-            length: self.length.as_ref(),
+            href: self.href.clone(),
+            rel: self.rel.clone(),
+            media_type: self.media_type.clone(),
+            href_lang: self.href_lang.clone(),
+            title: self.title.clone(),
+            length: self.length,
         })
     }
 }
@@ -509,10 +509,10 @@ pub struct Category {
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct NewCategory<'a> {
-    pub term: &'a str,
-    pub scheme: Option<&'a str>,
-    pub label: Option<&'a str>,
+pub struct NewCategory {
+    pub term: String,
+    pub scheme: Option<String>,
+    pub label: Option<String>,
 }
 
 #[derive(Default, Debug)]
@@ -554,9 +554,9 @@ impl CategoryBuilder {
 
     pub fn build(&self) -> AppResult<NewCategory> {
         Ok(NewCategory {
-            term: self.term.as_str(),
-            scheme: self.scheme.as_deref(),
-            label: self.label.as_deref(),
+            term: self.term.clone(),
+            scheme: self.scheme.clone(),
+            label: self.label.clone(),
         })
     }
 }
@@ -571,11 +571,11 @@ pub struct Content {
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct NewContent<'a> {
-    pub body: Option<&'a str>,
-    pub content_type: Option<&'a str>,
-    pub length: Option<&'a i64>,
-    pub src: Option<&'a i64>,
+pub struct NewContent {
+    pub body: Option<String>,
+    pub content_type: Option<String>,
+    pub length: Option<i64>,
+    pub src: Option<i64>,
 }
 
 #[derive(Default, Debug)]
@@ -628,10 +628,10 @@ impl ContentBuilder {
 
     pub fn build(&self) -> AppResult<NewContent> {
         Ok(NewContent {
-            body: self.body.as_deref(),
-            content_type: self.content_type.as_deref(),
-            length: self.length.as_ref(),
-            src: self.src.as_ref(),
+            body: self.body.clone(),
+            content_type: self.content_type.clone(),
+            length: self.length,
+            src: self.src,
         })
     }
 }

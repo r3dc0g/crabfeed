@@ -1146,6 +1146,12 @@ pub async fn insert_media(
         .description(media.description)
         .build()?;
 
+    // If all fields are null, don't insert
+    if new_media.title.is_none() && new_media.thumbnail.is_none() && new_media.description.is_none()
+    {
+        return Ok(None);
+    }
+
     query!(
         r#"
         INSERT INTO media (title, thumbnail, description)
@@ -1163,14 +1169,10 @@ pub async fn insert_media(
         Media,
         r#"
         SELECT *
-        FROM MEDIA
-        WHERE title = $1
-        AND thumbnail = $2
-        AND description = $3
+        FROM media
+        WHERE media.thumbnail = ?
         "#,
-        new_media.title,
         new_media.thumbnail,
-        new_media.description
     )
     .fetch_one(&mut *conn)
     .await

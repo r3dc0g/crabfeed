@@ -5,4 +5,5 @@
 /urls
 /backups
 /tests/test_db
+test_db.db
 .nvim-dap.lua
