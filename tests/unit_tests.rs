@@ -1,9 +1,5 @@
 use core::panic;
-use std::{
-    env::current_dir,
-    fs::create_dir_all,
-    time::{self, Duration},
-};
+use std::{env::current_dir, fs::create_dir_all, time::Duration};
 
 use chrono::Utc;
 use crabfeed::{
@@ -19,7 +15,6 @@ use env_logger::Target;
 use log::{debug, info};
 use ratatui::style::Color;
 use tokio::time::sleep;
-use uuid::{timestamp, Uuid};
 
 #[tokio::test]
 async fn data_is_refreshed() {

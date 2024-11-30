@@ -179,11 +179,17 @@ async fn add_feed(
     sender: tokio::sync::mpsc::Sender<AppEvent>,
 ) -> AppResult<()> {
     debug!("Adding {feed_url}...");
-    let content = reqwest::get(feed_url.as_str())
-        .await?
-        .text()
-        .await
-        .expect("Failed to get feed data");
+
+    let Ok(response) = reqwest::get(feed_url.as_str()).await else {
+        sender
+            .send(AppEvent::Complete)
+            .await
+            .expect("Failed to send DataEvent::Complete");
+
+        return Ok(());
+    };
+
+    let content = response.text().await.expect("Failed to get feed data");
 
     let feed = parser::parse(content.as_bytes());
 

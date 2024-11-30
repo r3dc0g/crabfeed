@@ -43,7 +43,11 @@ impl Feeds {
         self.feed_items = feeds;
     }
 
-    fn scroll_down(&mut self) {
+    fn scroll_down(&mut self) -> Option<UiCallback> {
+        if self.feed_items.is_empty() {
+            return None;
+        }
+
         if let Some(index) = self.list_state.selected() {
             if index < self.feed_items.len() - 1 {
                 self.list_state.select_next();
@@ -52,10 +56,20 @@ impl Feeds {
             }
         } else {
             self.list_state.select_first();
+            return None;
         }
+
+        return Some(Box::new(move |app| {
+            app.ui.next_entries();
+            Ok(())
+        }));
     }
 
-    fn scroll_up(&mut self) {
+    fn scroll_up(&mut self) -> Option<UiCallback> {
+        if self.feed_items.is_empty() {
+            return None;
+        }
+
         if let Some(index) = self.list_state.selected() {
             if index > 0 {
                 self.list_state.select(Some(index - 1));
@@ -65,6 +79,40 @@ impl Feeds {
         } else {
             self.list_state.select(Some(self.feed_items.len() - 1));
         }
+
+        return Some(Box::new(move |app| {
+            app.ui.prev_entries();
+            Ok(())
+        }));
+    }
+
+    fn select_feed(&mut self) -> Option<UiCallback> {
+        return Some(Box::new(move |app| {
+            app.ui
+                .set_current_route(Route::new(RouteId::Home, ActiveBlock::Entries));
+            Ok(())
+        }));
+    }
+
+    fn delete_feed(&mut self) -> Option<UiCallback> {
+        if let Some(index) = self.list_state.selected() {
+            let feed_id = self.feed_items[index].id;
+            self.feed_items.remove(index);
+
+            if index > 0 {
+                self.list_state.select(Some(index - 1));
+            } else {
+                self.list_state.select(None);
+            }
+
+            return Some(Box::new(move |app| {
+                app.ui.remove_entries(index);
+                app.dispatch(crate::data::data::DataEvent::DeleteFeed(feed_id.clone()))?;
+                Ok(())
+            }));
+        }
+
+        return None;
     }
 }
 
@@ -92,61 +140,18 @@ impl View for Feeds {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key.code {
-            KeyCode::Char('j') | KeyCode::Down => {
-                if self.feed_items.is_empty() {
-                    return None;
-                }
-
-                self.scroll_down();
-
-                return Some(Box::new(move |app| {
-                    app.ui.next_entries();
-                    Ok(())
-                }));
-            }
-            KeyCode::Char('k') | KeyCode::Up => {
-                if self.feed_items.is_empty() {
-                    return None;
-                }
-
-                self.scroll_up();
-
-                return Some(Box::new(move |app| {
-                    app.ui.prev_entries();
-                    Ok(())
-                }));
-            }
+            KeyCode::Char('j') | KeyCode::Down => self.scroll_down(),
+            KeyCode::Char('k') | KeyCode::Up => self.scroll_up(),
             KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => {
                 // Don't select a phantom feed and move to entries
                 if key.code == KeyCode::Enter && self.feed_items.is_empty() {
                     return None;
                 }
 
-                return Some(Box::new(move |app| {
-                    app.ui
-                        .set_current_route(Route::new(RouteId::Home, ActiveBlock::Entries));
-                    Ok(())
-                }));
+                self.select_feed()
             }
             _ if key.code == KeyCode::Char('d') && key.modifiers == KeyModifiers::CONTROL => {
-                if let Some(index) = self.list_state.selected() {
-                    let feed_id = self.feed_items[index].id;
-                    self.feed_items.remove(index);
-
-                    if index > 0 {
-                        self.list_state.select(Some(index - 1));
-                    } else {
-                        self.list_state.select(None);
-                    }
-
-                    return Some(Box::new(move |app| {
-                        app.ui.remove_entries(index);
-                        app.dispatch(crate::data::data::DataEvent::DeleteFeed(feed_id.clone()))?;
-                        Ok(())
-                    }));
-                }
-
-                return None;
+                self.delete_feed()
             }
             _ => None,
         }

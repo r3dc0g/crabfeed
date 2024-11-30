@@ -73,6 +73,67 @@ impl Entries {
         }
         self.entry_items.remove(index);
     }
+
+    fn scroll_down(&mut self) -> Option<UiCallback> {
+        if !self.entry_items.is_empty() {
+            if !self.entry_items[self.index].is_empty() {
+                if let Some(index) = self.list_state.selected() {
+                    if index < self.entry_items[self.index].len() - 1 {
+                        self.list_state.select_next();
+                    } else {
+                        self.list_state.select_first();
+                    }
+                } else if self.entry_items[self.index].len() > 0 {
+                    self.list_state.select_first();
+                }
+            }
+        }
+
+        None
+    }
+
+    fn scroll_up(&mut self) -> Option<UiCallback> {
+        if !self.entry_items.is_empty() {
+            if !self.entry_items[self.index].is_empty() {
+                if let Some(index) = self.list_state.selected() {
+                    if index > 0 {
+                        self.list_state.select(Some(index - 1));
+                    } else {
+                        self.list_state
+                            .select(Some(self.entry_items[self.index].len() - 1));
+                    }
+                } else if self.entry_items[self.index].len() > 0 {
+                    self.list_state
+                        .select(Some(self.entry_items[self.index].len() - 1));
+                }
+            }
+        }
+
+        None
+    }
+
+    fn select_entry(&mut self) -> Option<UiCallback> {
+        if !self.entry_items.is_empty() {
+            if !self.entry_items[self.index].is_empty() {
+                let entry = Some(
+                    self.entry_items[self.index][self.list_state.selected().unwrap_or(0)].clone(),
+                );
+
+                self.entry_items[self.index][self.list_state.selected().unwrap()].read = true;
+                let entry_id = self.entry_items[self.index][self.list_state.selected().unwrap()].id;
+
+                return Some(Box::new(move |app| {
+                    app.dispatch(DataEvent::ReadEntry(entry_id))?;
+                    app.ui
+                        .set_current_route(Route::new(RouteId::Entry, ActiveBlock::Entry));
+                    app.ui.set_entry(entry.clone());
+                    Ok(())
+                }));
+            }
+        }
+
+        None
+    }
 }
 
 impl View for Entries {
@@ -148,66 +209,9 @@ impl View for Entries {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Option<UiCallback> {
         match key.code {
-            KeyCode::Char('j') | KeyCode::Down => {
-                if !self.entry_items.is_empty() {
-                    if !self.entry_items[self.index].is_empty() {
-                        if let Some(index) = self.list_state.selected() {
-                            if index < self.entry_items[self.index].len() - 1 {
-                                self.list_state.select_next();
-                            } else {
-                                self.list_state.select_first();
-                            }
-                        } else if self.entry_items[self.index].len() > 0 {
-                            self.list_state.select_first();
-                        }
-                    }
-                }
-
-                return None;
-            }
-            KeyCode::Char('k') | KeyCode::Up => {
-                if !self.entry_items.is_empty() {
-                    if !self.entry_items[self.index].is_empty() {
-                        if let Some(index) = self.list_state.selected() {
-                            if index > 0 {
-                                self.list_state.select(Some(index - 1));
-                            } else {
-                                self.list_state
-                                    .select(Some(self.entry_items[self.index].len() - 1));
-                            }
-                        } else if self.entry_items[self.index].len() > 0 {
-                            self.list_state
-                                .select(Some(self.entry_items[self.index].len() - 1));
-                        }
-                    }
-                }
-                return None;
-            }
-            KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => {
-                if !self.entry_items.is_empty() {
-                    if !self.entry_items[self.index].is_empty() {
-                        let entry = Some(
-                            self.entry_items[self.index][self.list_state.selected().unwrap_or(0)]
-                                .clone(),
-                        );
-
-                        self.entry_items[self.index][self.list_state.selected().unwrap()].read =
-                            true;
-                        let entry_id =
-                            self.entry_items[self.index][self.list_state.selected().unwrap()].id;
-
-                        return Some(Box::new(move |app| {
-                            app.dispatch(DataEvent::ReadEntry(entry_id))?;
-                            app.ui
-                                .set_current_route(Route::new(RouteId::Entry, ActiveBlock::Entry));
-                            app.ui.set_entry(entry.clone());
-                            Ok(())
-                        }));
-                    }
-                }
-
-                None
-            }
+            KeyCode::Char('j') | KeyCode::Down => self.scroll_down(),
+            KeyCode::Char('k') | KeyCode::Up => self.scroll_up(),
+            KeyCode::Char('l') | KeyCode::Left | KeyCode::Enter => self.select_entry(),
             KeyCode::Char('h') | KeyCode::Right => {
                 return Some(Box::new(move |app| {
                     app.ui.back();
