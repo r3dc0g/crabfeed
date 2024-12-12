@@ -44,8 +44,7 @@ impl Route {
 pub enum AppEvent {
     Complete,
     Error(Box<Error>),
-    Updating(String),
-    Deleting(String),
+    DisplayMsg(String),
     FeshData(Cache),
 }
 
@@ -145,10 +144,7 @@ impl App {
                             self.ui.is_loading = false;
                         }
                     }
-                    AppEvent::Updating(message) => {
-                        self.ui.loading_msg = message;
-                    }
-                    AppEvent::Deleting(message) => {
+                    AppEvent::DisplayMsg(message) => {
                         self.ui.loading_msg = message;
                     }
                     AppEvent::FeshData(data) => {

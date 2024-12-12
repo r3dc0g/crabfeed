@@ -14,6 +14,7 @@ use feed_rs::parser;
 use log::debug;
 use reqwest;
 use sqlx::SqliteConnection;
+use tokio::time::{sleep, Duration};
 
 #[derive(Debug)]
 pub struct Cache {
@@ -130,7 +131,7 @@ async fn update_feeds(
 
     for feed in feed_items.iter() {
         sender
-            .send(AppEvent::Updating(format!(
+            .send(AppEvent::DisplayMsg(format!(
                 "Updating {}...",
                 feed.title.clone().unwrap_or("Untitled Feed".to_string())
             )))
@@ -182,9 +183,16 @@ async fn add_feed(
 
     let Ok(response) = reqwest::get(feed_url.as_str()).await else {
         sender
+            .send(AppEvent::DisplayMsg("Could not find feed".to_string()))
+            .await
+            .expect("Failed to send AppEvent::DisplayMsg");
+
+        sleep(Duration::from_secs(1)).await;
+
+        sender
             .send(AppEvent::Complete)
             .await
-            .expect("Failed to send DataEvent::Complete");
+            .expect("Failed to send AppEvent::Complete");
 
         return Ok(());
     };
@@ -194,6 +202,21 @@ async fn add_feed(
     let feed = parser::parse(content.as_bytes());
 
     if let Ok(feed) = feed {
+        if feed.title.is_none() {
+            sender
+                .send(AppEvent::DisplayMsg("Adding Untitled Feed...".to_string()))
+                .await
+                .expect("Failed to send AppEvent::DisplayMsg");
+        } else {
+            sender
+                .send(AppEvent::DisplayMsg(format!(
+                    "Adding {}...",
+                    feed.title.clone().unwrap().content
+                )))
+                .await
+                .expect("Failed to send AppEvent::DisplayMsg");
+        }
+
         let conn = &mut connect(database_url)
             .await
             .expect("Failed to connect to Database");
@@ -207,7 +230,7 @@ async fn add_feed(
     sender
         .send(AppEvent::Complete)
         .await
-        .expect("Failed to send DataEvent::Complete");
+        .expect("Failed to send AppEvent::Complete");
 
     Ok(())
 }
@@ -223,7 +246,7 @@ async fn delete_feed(
     let feed = select_feed(conn, &feed_id).await?;
 
     sender
-        .send(AppEvent::Deleting(format!(
+        .send(AppEvent::DisplayMsg(format!(
             "Deleting {}...",
             feed.title.unwrap_or("Untitled Feed".to_string())
         )))
@@ -235,7 +258,7 @@ async fn delete_feed(
     sender
         .send(AppEvent::Complete)
         .await
-        .expect("Failed to send DataEvent::Complete");
+        .expect("Failed to send AppEvent::Complete");
 
     Ok(())
 }
@@ -317,7 +340,7 @@ async fn read_entry(
     sender
         .send(AppEvent::Complete)
         .await
-        .expect("Failed to send DataEvent::Complete");
+        .expect("Failed to send AppEvent::Complete");
 
     Ok(())
 }
