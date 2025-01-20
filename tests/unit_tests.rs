@@ -96,6 +96,19 @@ async fn feed_is_added() {
             .expect("Failed to receive response DataEvent");
 
         match event {
+            AppEvent::DisplayMsg(_) => {}
+            e => {
+                panic!("Unexpected event received, {:?}", e);
+            }
+        }
+
+        sleep(Duration::from_secs(2)).await;
+
+        let event = receiver
+            .try_recv()
+            .expect("Failed to receive response DataEvent");
+
+        match event {
             AppEvent::Complete => {}
             e => {
                 panic!("Unexpected event received, {:?}", e);
@@ -127,6 +140,18 @@ async fn feed_is_deleted() {
         data::handle_event(db_url.clone(), DataEvent::AddFeed(feed), sender.clone())
             .await
             .expect("Failed to handle AddFeed event");
+
+        sleep(Duration::from_secs(2)).await;
+
+        match receiver
+            .try_recv()
+            .expect("Failed to receive response DataEvent")
+        {
+            AppEvent::DisplayMsg(_) => {}
+            e => {
+                panic!("Unexpected event received, {:?}", e);
+            }
+        }
 
         sleep(Duration::from_secs(2)).await;
 
@@ -200,7 +225,7 @@ async fn feed_is_deleted() {
             .try_recv()
             .expect("Failed to receive completed response DataEvent")
         {
-            AppEvent::Deleting(msg) => {
+            AppEvent::DisplayMsg(msg) => {
                 debug!("{msg}");
             }
             e => {
@@ -239,6 +264,18 @@ async fn entry_is_marked_read() {
     )
     .await
     .expect("Failed to handle AddFeed event");
+
+    sleep(Duration::from_secs(2)).await;
+
+    match receiver
+        .try_recv()
+        .expect("Failed to receive response DataEvent")
+    {
+        AppEvent::DisplayMsg(_) => {}
+        e => {
+            panic!("Unexpected event received, {:?}", e);
+        }
+    }
 
     sleep(Duration::from_secs(2)).await;
 
