@@ -1,0 +1,25 @@
+---
+source: src/tuihtml/parser.rs
+assertion_line: 437
+expression: terminal.backend()
+---
+"Breht reads and reacts to "A Letter To The American People" written by Masoud   "
+"Pezeschkian, the Iranian president, as a ground invasion of some sort seems     "
+"imminent. Check out our new design in collaboration with Goods for the People   "
+"HERE[1]                                                                         "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+" -------------------------------------------------------------------------------"
+"                                                                                "
+"Support Rev Left and get bonus episodes on Patreon[2]                           "
+"                                                                                "
+"Make a one-time donation to Rev Left at BuyMeACoffee.com/revleftradio[3]        "
+"                                                                                "
+"Follow RLR on IG HERE[4]                                                        "
+"                                                                                "
+"Learn more about Rev Left HERE[5]                                               "
+"                                                                                "
+"                                                                                "
+"                                                                                "

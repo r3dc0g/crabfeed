@@ -6,6 +6,7 @@ use crate::AppResult;
 use feed_rs::model;
 use html_parser::{Dom, Node};
 use log::debug;
+use sqlx::Connection;
 use sqlx::query;
 use sqlx::query_as;
 use sqlx::sqlite::SqliteConnectOptions;
@@ -193,10 +194,11 @@ async fn setup_database(conn: &mut SqliteConnection) -> AppResult<()> {
 }
 
 pub async fn connect(database_url: String) -> AppResult<SqliteConnection> {
-    let mut conn = SqliteConnectOptions::from_str(&database_url)?
-        .create_if_missing(true)
-        .connect()
-        .await?;
+    let opt = SqliteConnectOptions::from_str(&database_url)?
+        .create_if_missing(true);
+
+    let mut conn = SqliteConnection::connect_with(&opt).await?;
+
     setup_database(&mut conn).await?;
 
     Ok(conn)

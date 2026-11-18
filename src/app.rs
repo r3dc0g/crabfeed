@@ -58,11 +58,14 @@ pub struct App {
 
 impl App {
     pub fn new(config: Settings) -> Self {
+
+        let db_url = config.database_url.clone();
+
         App {
             is_running: true,
             is_loading: false,
-            ui: Ui::new(config.clone()),
-            data_handler: DataHandler::new(config.database_url.clone()),
+            ui: Ui::new(config),
+            data_handler: DataHandler::new(db_url),
             running_data_calls: 0,
         }
     }
@@ -148,8 +151,7 @@ impl App {
                         self.ui.loading_msg = message;
                     }
                     AppEvent::FeshData(data) => {
-                        self.ui.update_feeds(data.feeds);
-                        self.ui.update_entries(data.entries);
+                        self.ui.update(data.feeds, data.entries);
                     }
                     AppEvent::Error(_) => {
                         self.is_running = false;
@@ -157,6 +159,6 @@ impl App {
                 }
             }
         }
-        self.ui.update();
+        self.ui.refresh();
     }
 }

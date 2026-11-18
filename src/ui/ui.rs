@@ -8,6 +8,7 @@ use crate::app::{ActiveBlock, Route, RouteId};
 use crate::config::Settings;
 use crate::data::data::DataEvent;
 use crate::prelude::{EntryData, FeedData};
+use crate::ui::{entries, feeds};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -61,8 +62,9 @@ impl Ui {
         self.navigation_stack.pop();
     }
 
-    pub fn update_entries(&mut self, entries: Vec<Vec<EntryData>>) {
-        self.entries.update_entries(entries);
+    pub fn update(&mut self, feed_data: Vec<FeedData>, entry_data: Vec<Vec<EntryData>>) {
+        self.feeds.update_feeds(feed_data);
+        self.entries.update_entries(entry_data);
     }
 
     pub fn next_entries(&mut self) {
@@ -77,10 +79,6 @@ impl Ui {
         self.entries.remove(index);
     }
 
-    pub fn update_feeds(&mut self, feeds: Vec<FeedData>) {
-        self.feeds.update_feeds(feeds);
-    }
-
     pub fn set_entry(&mut self, entry: Option<EntryData>) {
         if let Some(data) = entry {
             self.entry.set_entry(data);
@@ -91,7 +89,7 @@ impl Ui {
         self.popup = None;
     }
 
-    pub fn update(&mut self) {
+    pub fn refresh(&mut self) {
         let current_route = self
             .get_current_route()
             .unwrap_or(&Route::default())
@@ -141,7 +139,7 @@ impl Ui {
             }
             _ if key.code == KeyCode::Char('u') && key.modifiers == KeyModifiers::CONTROL => {
                 return Some(Box::new(move |app| {
-                    app.data_handler.dispatch(DataEvent::UpdateFeeds)?;
+                    app.dispatch(DataEvent::UpdateFeeds)?;
                     app.is_loading = true;
                     app.ui.is_loading = true;
                     Ok(())
