@@ -3,6 +3,7 @@ use super::util::{parse_hex, parse_html};
 use super::{UiCallback, View};
 use crate::config::Settings;
 use crate::prelude::EntryData;
+use crate::tuihtml::widget::HTMLWidget;
 use clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::prelude::*;
@@ -21,6 +22,7 @@ pub struct Entry {
     selected_section: Option<Section>,
     hovered_section: Option<Section>,
     link_state: ListState,
+    link_list: Vec<String>,
 }
 
 impl Entry {
@@ -32,15 +34,18 @@ impl Entry {
             selected_section: None,
             hovered_section: Some(Section::Content),
             link_state: ListState::default(),
+            link_list: Vec::new(),
         }
     }
 
     pub fn set_entry(&mut self, entry: EntryData) {
         self.entry = Some(entry.clone());
         self.line_index = 0;
-        if let Ok(description) = parse_html(entry.description) {
-            self.description = Some(description);
-        }
+        let html_widget = HTMLWidget::new(entry.description);
+        let link_list = html_widget.get_links();
+        let html_paragraph = html_widget.get_paragraph();
+        self.description = Some(html_paragraph);
+        self.link_list = link_list;
     }
 }
 

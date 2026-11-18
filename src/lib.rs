@@ -7,6 +7,7 @@ pub mod prelude;
 pub mod time;
 pub mod tui;
 pub mod ui;
+pub mod tuihtml;
 
 use error::Error;
 pub type AppResult<T> = core::result::Result<T, Error>;

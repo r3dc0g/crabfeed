@@ -59,7 +59,7 @@ impl DataHandler {
                         _ => {
                             handle_event(database_url.clone(), event, moved_sender.clone())
                                 .await
-                                .expect("Failed to handle Event");
+                                .expect("Failed to handle {}");
                         }
                     }
                 }
